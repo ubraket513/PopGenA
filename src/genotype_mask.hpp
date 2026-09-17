@@ -8,6 +8,5 @@ namespace pg {
 // INFO AC/AN/AF/NS values are removed because masking invalidates them; other
 // annotations are preserved and are not recalculated. Existing outputs are
 // never replaced. Failed attempts may retain an unpublished staging directory.
-json mask_genotypes(const fs::path& input, const fs::path& output,
-                    int min_dp, int min_gq);
+json mask_genotypes(const fs::path& input, const fs::path& output, int min_dp, int min_gq);
 }

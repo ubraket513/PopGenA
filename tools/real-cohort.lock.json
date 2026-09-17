@@ -2,7 +2,7 @@
   "schema_version": 1,
   "purpose": "Bounded real-data genotype integration validation; not genome-wide population inference",
   "assembly": "GRCh38",
-  "download_budget_bytes": 550000000,
+  "download_budget_bytes": 81000000,
   "scratch_reservation_bytes": 4000000000,
   "release_manifest": "https://ftp.1000genomes.ebi.ac.uk/vol1/ftp/data_collections/1000G_2504_high_coverage/working/20201028_3202_phased/phased-manifest_July2021.tsv",
   "source_collection_samples": 3202,

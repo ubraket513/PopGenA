@@ -1,0 +1,56 @@
+{
+  "samples": 100000,
+  "sites": 10000,
+  "genotypes": 1000000000,
+  "checked_counts": {
+    "alternate_alleles": 649987587,
+    "called": 989998328,
+    "heterozygous": 349985015,
+    "missing": 10001672,
+    "purpose": "synthetic streaming throughput only",
+    "samples": 100000,
+    "sites": 10000
+  },
+  "generate": {
+    "cancelled": false,
+    "cpu_system_ms": 613,
+    "cpu_user_ms": 103075,
+    "elapsed_ms": 103862,
+    "exit_codes": [
+      0
+    ],
+    "max_rss_bytes": 23527424,
+    "timed_out": false
+  },
+  "stats": {
+    "cancelled": false,
+    "cpu_system_ms": 1953,
+    "cpu_user_ms": 18508,
+    "elapsed_ms": 16806,
+    "exit_codes": [
+      0
+    ],
+    "max_rss_bytes": 43012096,
+    "timed_out": false
+  },
+  "retained_work_bytes": 302516601,
+  "memory_metric": "Peak RSS of the largest process (getrusage)",
+  "scope": "Streaming statistics only; no KING/PCA scalability claim",
+  "measured": "2026-09-17",
+  "platform": "linux-x86_64 (WSL2), tools built from third_party/src",
+  "machine": {
+    "os": "Ubuntu 26.04.1 LTS",
+    "kernel": "6.18.33.2-microsoft-standard-WSL2",
+    "environment": "WSL2 on the Windows 11 machine recorded in machine.json",
+    "memory_total_kib": 7984768,
+    "memory_note": "WSL2 default VM memory limit (about half of the 16 GiB host); raise with memory= in %UserProfile%/.wslconfig",
+    "cpu": {
+      "name": "11th Gen Intel(R) Core(TM) i7-1165G7 @ 2.80GHz",
+      "physical_cores": 4,
+      "logical_processors": 8
+    },
+    "compiler": "gcc (Ubuntu 15.2.0-16ubuntu1) 15.2.0",
+    "root_available_bytes_at_measurement": 963295260672
+  },
+  "windows_reference": "docs/validation/streaming-100k.json"
+}

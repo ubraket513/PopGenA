@@ -1,244 +1,339 @@
 #include "workflow.hpp"
+#include <fcntl.h>
+#include <signal.h>
+#include <sys/file.h>
+#include <sys/prctl.h>
+#include <sys/resource.h>
+#include <sys/wait.h>
+#include <unistd.h>
 #include <algorithm>
-#include <array>
 #include <chrono>
-#include <cwchar>
-#include <set>
+#include <csignal>
+#include <cstdlib>
+#include <cstring>
 #include <stdexcept>
+#include <string_view>
+#include <thread>
+
+extern char** environ;
 
 namespace pg {
 namespace {
-std::atomic_bool cancelled{false};
-BOOL WINAPI control_handler(DWORD event) {
-    if(event==CTRL_C_EVENT || event==CTRL_BREAK_EVENT || event==CTRL_CLOSE_EVENT) {
-        cancelled.store(true); return TRUE;
-    }
-    return FALSE;
+volatile std::sig_atomic_t cancel_signal = 0;
+void on_cancel(int signal) {
+    cancel_signal = signal;
 }
-[[noreturn]] void win_error(const std::string& action) {
-    throw std::runtime_error(action+" (Windows error "+std::to_string(GetLastError())+")");
+
+[[noreturn]] void sys_error(const std::string& action) {
+    throw std::runtime_error(action + ": " + std::strerror(errno));
 }
-struct Attributes {
-    std::vector<unsigned char> bytes;
-    LPPROC_THREAD_ATTRIBUTE_LIST list=nullptr;
-    explicit Attributes(const std::vector<HANDLE>& handles) {
-        SIZE_T size=0;
-        InitializeProcThreadAttributeList(nullptr,1,0,&size);
-        bytes.resize(size);
-        auto p=reinterpret_cast<LPPROC_THREAD_ATTRIBUTE_LIST>(bytes.data());
-        if(!InitializeProcThreadAttributeList(p,1,0,&size))win_error("Initialize handle list");
-        list=p;
-        if(!UpdateProcThreadAttribute(list,0,PROC_THREAD_ATTRIBUTE_HANDLE_LIST,
-            const_cast<HANDLE*>(handles.data()),handles.size()*sizeof(HANDLE),nullptr,nullptr)) {
-            DeleteProcThreadAttributeList(list);list=nullptr;win_error("Set inherited handles");
-        }
+uint64_t to_ms(const timeval& t) {
+    return static_cast<uint64_t>(t.tv_sec) * 1000 + static_cast<uint64_t>(t.tv_usec) / 1000;
+}
+
+class Fd {
+    int fd_;
+
+public:
+    explicit Fd(int fd) : fd_(fd) {}
+    ~Fd() {
+        if (fd_ >= 0) ::close(fd_);
     }
-    ~Attributes(){if(list)DeleteProcThreadAttributeList(list);}
+    Fd(const Fd&) = delete;
+    Fd& operator=(const Fd&) = delete;
+    Fd(Fd&& other) noexcept : fd_(std::exchange(other.fd_, -1)) {}
+    int get() const { return fd_; }
 };
-WinHandle open_stream(const fs::path& path,DWORD access,DWORD creation) {
-    SECURITY_ATTRIBUTES sa{sizeof(sa),nullptr,TRUE};
-    WinHandle h(CreateFileW(path.c_str(),access,FILE_SHARE_READ|FILE_SHARE_WRITE,&sa,creation,FILE_ATTRIBUTE_NORMAL,nullptr));
-    if(!h)win_error("Open process stream "+utf8(path));
-    return h;
+Fd open_output(const fs::path& path) {
+    Fd fd(::open(path.c_str(), O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC, 0644));
+    if (fd.get() < 0) sys_error("Open process output " + utf8(path));
+    return fd;
 }
-struct CaseInsensitive {
-    bool operator()(const std::wstring& a,const std::wstring& b) const {return _wcsicmp(a.c_str(),b.c_str())<0;}
-};
-std::vector<wchar_t> environment(int threads) {
-    auto block=GetEnvironmentStringsW();if(!block)win_error("Read process environment");
-    std::map<std::wstring,std::wstring,CaseInsensitive> vars;
-    for(auto p=block;*p;p+=wcslen(p)+1) {
-        std::wstring entry(p);auto split=entry.find(L'=',entry[0]==L'='?1:0);
-        if(split!=std::wstring::npos)vars[entry.substr(0,split)]=entry.substr(split+1);
+bool executable_file(const fs::path& path) {
+    return fs::is_regular_file(path) && ::access(path.c_str(), X_OK) == 0;
+}
+// Child environment: inherited, with thread counts pinned and a stable locale.
+std::vector<std::string> child_environment(int threads) {
+    const std::map<std::string, std::string> overrides = {{"OMP_NUM_THREADS", std::to_string(threads)},
+                                                          {"OPENBLAS_NUM_THREADS", "1"},
+                                                          {"MKL_NUM_THREADS", "1"},
+                                                          {"LC_ALL", "C"}};
+    std::vector<std::string> result;
+    for (char** entry = environ; *entry; ++entry) {
+        std::string_view item(*entry);
+        if (!overrides.contains(std::string(item.substr(0, item.find('='))))) result.emplace_back(item);
     }
-    FreeEnvironmentStringsW(block);
-    vars[L"OMP_NUM_THREADS"]=std::to_wstring(threads);
-    vars[L"OPENBLAS_NUM_THREADS"]=L"1";vars[L"MKL_NUM_THREADS"]=L"1";
-    vars[L"LC_ALL"]=L"C";
-    std::vector<wchar_t> result;
-    for(const auto& [key,value]:vars) {
-        auto entry=key+L"="+value;result.insert(result.end(),entry.begin(),entry.end());result.push_back(0);
+    for (const auto& [key, value] : overrides) result.push_back(key + "=" + value);
+    return result;
+}
+}
+
+FileLock::~FileLock() {
+    if (fd_ >= 0) ::close(fd_);
+}
+FileLock& FileLock::operator=(FileLock&& other) noexcept {
+    if (this != &other) {
+        if (fd_ >= 0) ::close(fd_);
+        fd_ = std::exchange(other.fd_, -1);
     }
-    result.push_back(0);return result;
+    return *this;
 }
+
+// SIGINT/SIGTERM/SIGHUP cancel the running pipeline, which then terminates its whole
+// process group. Killing `popgen run` reaches everything through parent-death signals:
+// Ninja (started by run_pipeline) gets SIGTERM, Ninja forwards it to each `popgen step`
+// (which also follows its parent), and each step terminates its tool process group.
+void install_cancellation_handler(bool follow_parent) {
+    // Only processes started by PopGenA or Ninja follow their parent; a top-level `popgen run`
+    // must survive its launching shell (for example under nohup).
+    if (follow_parent && ::prctl(PR_SET_PDEATHSIG, SIGTERM) != 0) sys_error("Request parent-death signal");
+    struct sigaction action{};
+    action.sa_handler = on_cancel;
+    sigemptyset(&action.sa_mask);
+    for (int signal : {SIGINT, SIGTERM, SIGHUP})
+        if (sigaction(signal, &action, nullptr) != 0) sys_error("Install cancellation handler");
 }
-void install_cancellation_handler() {
-    if(!SetConsoleCtrlHandler(control_handler,TRUE))win_error("Install cancellation handler");
+bool cancellation_requested() {
+    return cancel_signal != 0;
 }
-bool cancellation_requested(){return cancelled.load();}
+
 fs::path executable_path() {
-    std::array<wchar_t,32768> buffer{};
-    auto size=GetModuleFileNameW(nullptr,buffer.data(),static_cast<DWORD>(buffer.size()));
-    if(!size||size==buffer.size())win_error("Locate executable");
-    return fs::canonical(fs::path(buffer.data()));
+    return fs::canonical("/proc/self/exe");
 }
-fs::path resolve_executable(const std::string& name,const fs::path& base) {
-    if(name.empty()||name.find('\0')!=std::string::npos)throw std::runtime_error("Empty or invalid executable name");
-    auto candidate=from_utf8(name);
-    if(candidate.has_parent_path())candidate=fs::absolute(candidate.is_absolute()?candidate:base/candidate);
-    else {
-        auto local=executable_path().parent_path().parent_path()/".deps"/"ucrt64"/"bin"/candidate;
-        if(!local.has_extension())local+=L".exe";
-        if(fs::is_regular_file(local))candidate=local;
-        else {
-            std::array<wchar_t,32768> path{};
-            auto size=SearchPathW(nullptr,candidate.c_str(),L".exe",static_cast<DWORD>(path.size()),path.data(),nullptr);
-            if(!size||size>=path.size())throw std::runtime_error("Executable not found: "+name);
-            candidate=path.data();
+
+// Bare names resolve to the vendored tools first (.deps/linux/prefix/bin next to build/),
+// then to PATH. Names containing a slash are paths relative to base.
+fs::path resolve_executable(const std::string& name, const fs::path& base) {
+    if (name.empty() || name.find('\0') != std::string::npos)
+        throw std::runtime_error("Empty or invalid executable name");
+    auto candidate = from_utf8(name);
+    if (candidate.has_parent_path()) {
+        candidate = candidate.is_absolute() ? candidate : base / candidate;
+    } else {
+        auto vendored =
+            executable_path().parent_path().parent_path() / ".deps" / "linux" / "prefix" / "bin" / candidate;
+        if (executable_file(vendored)) {
+            candidate = vendored;
+        } else {
+            const char* path = std::getenv("PATH");
+            std::string_view dirs = path ? path : "";
+            bool found = false;
+            for (size_t start = 0; start <= dirs.size() && !found;) {
+                auto end = std::min(dirs.find(':', start), dirs.size());
+                auto dir = dirs.substr(start, end - start);
+                auto option = fs::path(dir.empty() ? "." : std::string(dir)) / candidate;
+                if (executable_file(option)) {
+                    candidate = option;
+                    found = true;
+                }
+                start = end + 1;
+            }
+            if (!found) throw std::runtime_error("Executable not found: " + name);
         }
     }
-    auto ext=candidate.extension().wstring();std::transform(ext.begin(),ext.end(),ext.begin(),::towlower);
-    if(ext!=L".exe"||!fs::is_regular_file(candidate))throw std::runtime_error("Expected a native .exe: "+name);
+    if (!executable_file(candidate)) throw std::runtime_error("Not an executable file: " + name);
     return fs::canonical(candidate);
 }
-std::wstring quote_windows(const std::wstring& argument) {
-    if(argument.find(L'\0')!=std::wstring::npos)throw std::runtime_error("NUL in command argument");
-    std::wstring result=L"\"";size_t slashes=0;
-    for(auto c:argument) {
-        if(c==L'\\'){++slashes;continue;}
-        if(c==L'\"'){result.append(slashes*2+1,L'\\');result+=c;}
-        else {result.append(slashes,L'\\');result+=c;}
-        slashes=0;
-    }
-    result.append(slashes*2,L'\\');result+=L'\"';return result;
-}
+
 bool ProcessResult::success() const {
-    return !timed_out&&!cancelled&&!exit_codes.empty()&&std::all_of(exit_codes.begin(),exit_codes.end(),[](auto code){return code==0;});
+    return !timed_out && !cancelled && !exit_codes.empty() &&
+           std::all_of(exit_codes.begin(), exit_codes.end(), [](int c) { return c == 0; });
 }
 json ProcessResult::record() const {
-    return {{"exit_codes",exit_codes},{"timed_out",timed_out},{"cancelled",cancelled},{"elapsed_ms",elapsed_ms},
-        {"peak_job_committed_bytes",peak_job_committed_bytes},{"cpu_user_ms",cpu_user_ms},{"cpu_kernel_ms",cpu_kernel_ms},
-        {"io_read_bytes",io_read_bytes},{"io_write_bytes",io_write_bytes}};
+    return {{"exit_codes", exit_codes},      {"timed_out", timed_out},     {"cancelled", cancelled},
+            {"elapsed_ms", elapsed_ms},      {"cpu_user_ms", cpu_user_ms}, {"cpu_system_ms", cpu_system_ms},
+            {"max_rss_bytes", max_rss_bytes}};
 }
-ProcessResult run_pipeline(const std::vector<Command>& commands,const ProcessOptions& o) {
-    if(commands.empty()||commands.size()>16)throw std::runtime_error("Pipeline must contain 1..16 commands");
-    if(cancellation_requested()||(o.cancel&&o.cancel->load()))return {{},false,true,0};
-    std::vector<fs::path> executables;
-    for(const auto& cmd:commands){if(cmd.argv.empty()||cmd.threads<1)throw std::runtime_error("Invalid command");executables.push_back(resolve_executable(cmd.argv.front(),o.cwd));}
-    WinHandle job(CreateJobObjectW(nullptr,nullptr));if(!job)win_error("Create pipeline job");
-    JOBOBJECT_EXTENDED_LIMIT_INFORMATION limits{};
-    limits.BasicLimitInformation.LimitFlags=JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
-    if(o.memory_mb){limits.BasicLimitInformation.LimitFlags|=JOB_OBJECT_LIMIT_JOB_MEMORY;limits.JobMemoryLimit=o.memory_mb*1024ULL*1024ULL;}
-    if(!SetInformationJobObject(job.get(),JobObjectExtendedLimitInformation,&limits,sizeof(limits)))win_error("Set job limits");
-    auto output=open_stream(o.stdout_file,GENERIC_WRITE,CREATE_ALWAYS);
-    auto error=open_stream(o.stderr_file,GENERIC_WRITE,CREATE_ALWAYS);
-    auto null_input=open_stream(fs::path(L"NUL"),GENERIC_READ,OPEN_EXISTING);
-    std::vector<WinHandle> children;
-    WinHandle previous;
-    auto start=std::chrono::steady_clock::now();
-    auto elapsed=[&](){return static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now()-start).count());};
+
+// Runs a pipeline (stdout of each command feeds the next) in one new process group.
+// On timeout, cancellation or any stage failing, the whole group receives SIGTERM, then
+// SIGKILL after a grace period. Descendants left behind by finished commands are killed
+// before returning so they cannot touch published outputs.
+ProcessResult run_pipeline(const std::vector<Command>& commands, const ProcessOptions& o) {
+    if (commands.empty() || commands.size() > 16) throw std::runtime_error("Pipeline must contain 1..16 commands");
+    auto cancel_requested = [&] { return cancellation_requested() || (o.cancel && o.cancel->load()); };
+    if (cancel_requested()) {
+        ProcessResult cancelled;
+        cancelled.cancelled = true;
+        return cancelled;
+    }
+
+    // Everything the children need is prepared before fork().
+    struct Stage {
+        std::vector<std::string> args, environment;
+        std::vector<char*> argv, envp;
+    };
+    std::vector<Stage> stages(commands.size());
+    for (size_t i = 0; i < commands.size(); ++i) {
+        if (commands[i].argv.empty() || commands[i].threads < 1) throw std::runtime_error("Invalid command");
+        auto& s = stages[i];
+        s.args = commands[i].argv;
+        s.args.front() = resolve_executable(s.args.front(), o.cwd).string();
+        s.environment = child_environment(commands[i].threads);
+        for (auto& a : s.args) s.argv.push_back(a.data());
+        s.argv.push_back(nullptr);
+        for (auto& e : s.environment) s.envp.push_back(e.data());
+        s.envp.push_back(nullptr);
+    }
+    auto output = open_output(o.stdout_file), error = open_output(o.stderr_file);
+    Fd null_input(::open("/dev/null", O_RDONLY | O_CLOEXEC));
+    if (null_input.get() < 0) sys_error("Open /dev/null");
+
+    auto start = std::chrono::steady_clock::now();
+    auto elapsed = [&] {
+        return static_cast<uint64_t>(
+            std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start).count());
+    };
+    std::vector<pid_t> pids;
+    pid_t group = 0, parent = ::getpid();
+    auto kill_group = [&](int signal) {
+        if (group > 0) ::kill(-group, signal);
+    };
+    auto reap_all = [&] {
+        for (auto pid : pids) ::waitpid(pid, nullptr, 0);
+    };
     try {
-        for(size_t i=0;i<commands.size();++i) {
-            if(cancellation_requested()||(o.cancel&&o.cancel->load()))throw std::runtime_error("Cancelled during process launch");
-            WinHandle next_read,next_write;
-            if(i+1<commands.size()) {
-                SECURITY_ATTRIBUTES sa{sizeof(sa),nullptr,TRUE};HANDLE r=nullptr,w=nullptr;
-                if(!CreatePipe(&r,&w,&sa,0))win_error("Create pipeline pipe");
-                next_read.reset(r);next_write.reset(w);
+        int previous = -1; // read end feeding the next stage
+        for (size_t i = 0; i < stages.size(); ++i) {
+            int pipe_fds[2] = {-1, -1};
+            bool last = i + 1 == stages.size();
+            if (!last && ::pipe2(pipe_fds, O_CLOEXEC) != 0) sys_error("Create pipe");
+            int report[2];
+            if (::pipe2(report, O_CLOEXEC) != 0) sys_error("Create exec status pipe");
+            pid_t pid = ::fork();
+            if (pid < 0) sys_error("Fork");
+            if (pid == 0) {
+                // exec failures reach the parent as errno through the CLOEXEC status pipe.
+                ::setpgid(0, group);
+                // If this runner dies, even by SIGKILL, its commands receive SIGTERM
+                // (see install_cancellation_handler for how that reaches their descendants).
+                if (::prctl(PR_SET_PDEATHSIG, SIGTERM) != 0 || ::getppid() != parent) {
+                    int e = errno ? errno : ESRCH;
+                    [[maybe_unused]] auto n = ::write(report[1], &e, sizeof e);
+                    ::_exit(127);
+                }
+                int in = previous >= 0 ? previous : null_input.get(), out = last ? output.get() : pipe_fds[1];
+                if (::dup2(in, 0) < 0 || ::dup2(out, 1) < 0 || ::dup2(error.get(), 2) < 0 ||
+                    ::chdir(o.cwd.c_str()) != 0) {
+                    int e = errno;
+                    [[maybe_unused]] auto n = ::write(report[1], &e, sizeof e);
+                    ::_exit(127);
+                }
+                ::execve(stages[i].argv[0], stages[i].argv.data(), stages[i].envp.data());
+                int e = errno;
+                [[maybe_unused]] auto n = ::write(report[1], &e, sizeof e);
+                ::_exit(127);
             }
-            STARTUPINFOEXW startup{};startup.StartupInfo.cb=sizeof(startup);
-            startup.StartupInfo.dwFlags=STARTF_USESTDHANDLES|STARTF_USESHOWWINDOW;startup.StartupInfo.wShowWindow=SW_HIDE;
-            startup.StartupInfo.hStdInput=previous?previous.get():null_input.get();
-            startup.StartupInfo.hStdOutput=next_write?next_write.get():output.get();
-            startup.StartupInfo.hStdError=error.get();
-            std::vector<HANDLE> handles{startup.StartupInfo.hStdInput,startup.StartupInfo.hStdOutput,startup.StartupInfo.hStdError};
-            Attributes attributes(handles);startup.lpAttributeList=attributes.list;
-            std::wstring line=quote_windows(executables[i].wstring());
-            for(size_t j=1;j<commands[i].argv.size();++j)line+=L" "+quote_windows(from_utf8(commands[i].argv[j]).wstring());
-            if(line.size()>32760)throw std::runtime_error("Windows command line too long");
-            auto env=environment(commands[i].threads);PROCESS_INFORMATION info{};
-            if(!CreateProcessW(executables[i].c_str(),line.data(),nullptr,nullptr,TRUE,
-                CREATE_SUSPENDED|CREATE_NO_WINDOW|CREATE_UNICODE_ENVIRONMENT|EXTENDED_STARTUPINFO_PRESENT,
-                env.data(),o.cwd.c_str(),&startup.StartupInfo,&info))win_error("Launch "+utf8(executables[i]));
-            WinHandle process(info.hProcess),thread(info.hThread);
-            if(!AssignProcessToJobObject(job.get(),process.get())) {
-                TerminateProcess(process.get(),125);WaitForSingleObject(process.get(),5000);win_error("Assign child to pipeline job");
+            ::setpgid(pid, group ? group : pid);
+            if (!group) group = pid;
+            pids.push_back(pid);
+            ::close(report[1]);
+            if (previous >= 0) ::close(previous);
+            if (!last) ::close(pipe_fds[1]);
+            previous = last ? -1 : pipe_fds[0];
+            int child_errno = 0;
+            auto n = ::read(report[0], &child_errno, sizeof child_errno);
+            ::close(report[0]);
+            if (n == sizeof child_errno) {
+                if (previous >= 0) ::close(previous);
+                errno = child_errno;
+                sys_error("Launch " + stages[i].args.front());
             }
-            children.push_back(std::move(process));
-            if(ResumeThread(thread.get())==static_cast<DWORD>(-1))win_error("Resume child");
-            previous=std::move(next_read);
         }
-        previous.reset();output.reset();error.reset();null_input.reset();
-        ProcessResult result;result.exit_codes.resize(children.size(),STILL_ACTIVE);
-        bool terminated=false;
-        for(;;) {
-            bool finished=true,failed=false;
-            for(size_t i=0;i<children.size();++i) {
-                auto wait=WaitForSingleObject(children[i].get(),0);
-                if(wait==WAIT_FAILED)win_error("Wait for process");
-                if(wait==WAIT_OBJECT_0) {
-                    DWORD code=0;if(!GetExitCodeProcess(children[i].get(),&code))win_error("Read process exit status");result.exit_codes[i]=code;
-                    if(code)failed=true;
-                } else finished=false;
+
+        ProcessResult result;
+        result.exit_codes.assign(pids.size(), -1);
+        std::vector<bool> done(pids.size(), false);
+        size_t remaining = pids.size();
+        bool signalled = false;
+        uint64_t kill_at = 0;
+        while (remaining) {
+            for (size_t i = 0; i < pids.size(); ++i) {
+                if (done[i]) continue;
+                int status = 0;
+                rusage usage{};
+                pid_t r = ::wait4(pids[i], &status, WNOHANG, &usage);
+                if (r < 0 && errno != EINTR) sys_error("Wait for " + stages[i].args.front());
+                if (r != pids[i]) continue;
+                done[i] = true;
+                --remaining;
+                result.exit_codes[i] = WIFEXITED(status) ? WEXITSTATUS(status) : 128 + WTERMSIG(status);
+                result.cpu_user_ms += to_ms(usage.ru_utime);
+                result.cpu_system_ms += to_ms(usage.ru_stime);
+                result.max_rss_bytes = std::max(result.max_rss_bytes, static_cast<uint64_t>(usage.ru_maxrss) * 1024);
+                if (result.exit_codes[i] != 0 && !signalled) {
+                    kill_group(SIGTERM);
+                    signalled = true;
+                    kill_at = elapsed() + 5000;
+                }
             }
-            result.cancelled=cancellation_requested()||(o.cancel&&o.cancel->load());
-            result.timed_out=o.timeout_ms&&elapsed()>=o.timeout_ms&&!finished;
-            if(finished)break;
-            if(failed||result.cancelled||result.timed_out) {
-                if(!TerminateJobObject(job.get(),result.cancelled?130:result.timed_out?124:125))win_error("Terminate pipeline job");
-                terminated=true;break;
+            if (!remaining) break;
+            if (!signalled) {
+                result.cancelled = cancel_requested();
+                result.timed_out = o.timeout_ms && elapsed() >= o.timeout_ms;
+                if (result.cancelled || result.timed_out) {
+                    kill_group(SIGTERM);
+                    signalled = true;
+                    kill_at = elapsed() + 5000;
+                }
+            } else if (elapsed() >= kill_at) {
+                kill_group(SIGKILL);
             }
-            Sleep(20);
+            std::this_thread::sleep_for(std::chrono::milliseconds(20));
         }
-        if(terminated)for(size_t i=0;i<children.size();++i) {
-            if(WaitForSingleObject(children[i].get(),5000)!=WAIT_OBJECT_0)throw std::runtime_error("Timed out waiting for terminated child");
-            DWORD code=0;if(!GetExitCodeProcess(children[i].get(),&code))win_error("Read terminated child status");result.exit_codes[i]=code;
-        }
-        // Also terminate descendants that outlived their direct parent before publishing outputs.
-        if(!TerminateJobObject(job.get(),125))win_error("Close pipeline descendants");
-        for(int tries=0;tries<250;++tries) {
-            JOBOBJECT_BASIC_ACCOUNTING_INFORMATION accounting{};
-            if(!QueryInformationJobObject(job.get(),JobObjectBasicAccountingInformation,&accounting,sizeof(accounting),nullptr))win_error("Query job cleanup");
-            if(!accounting.ActiveProcesses){
-                JOBOBJECT_EXTENDED_LIMIT_INFORMATION memory{};
-                JOBOBJECT_BASIC_AND_IO_ACCOUNTING_INFORMATION usage{};
-                if(!QueryInformationJobObject(job.get(),JobObjectExtendedLimitInformation,&memory,sizeof(memory),nullptr) ||
-                   !QueryInformationJobObject(job.get(),JobObjectBasicAndIoAccountingInformation,&usage,sizeof(usage),nullptr))
-                    win_error("Query completed job resource usage");
-                result.peak_job_committed_bytes=memory.PeakJobMemoryUsed;
-                result.cpu_user_ms=usage.BasicInfo.TotalUserTime.QuadPart/10000;
-                result.cpu_kernel_ms=usage.BasicInfo.TotalKernelTime.QuadPart/10000;
-                result.io_read_bytes=usage.IoInfo.ReadTransferCount;
-                result.io_write_bytes=usage.IoInfo.WriteTransferCount;
-                result.elapsed_ms=elapsed();return result;
-            }
-            Sleep(20);
-        }
-        throw std::runtime_error("Pipeline descendants did not exit within cleanup timeout");
-    } catch(...) {
-        TerminateJobObject(job.get(),125);
-        for(auto& child:children)WaitForSingleObject(child.get(),5000);
+        kill_group(SIGKILL); // descendants that outlived their parents
+        result.elapsed_ms = elapsed();
+        return result;
+    } catch (...) {
+        kill_group(SIGKILL);
+        reap_all();
         throw;
     }
 }
-WinHandle exclusive_lock(const fs::path& path) {
-    WinHandle h(CreateFileW(path.c_str(),GENERIC_WRITE,0,nullptr,CREATE_NEW,FILE_ATTRIBUTE_HIDDEN|FILE_FLAG_DELETE_ON_CLOSE,nullptr));
-    if(!h)throw std::runtime_error("Workflow is locked or not writable: "+utf8(path));
-    return h;
+
+FileLock exclusive_lock(const fs::path& path) {
+    int fd = ::open(path.c_str(), O_RDWR | O_CREAT | O_CLOEXEC, 0644);
+    if (fd < 0) sys_error("Open lock " + utf8(path));
+    FileLock lock(fd);
+    if (::flock(fd, LOCK_EX | LOCK_NB) != 0)
+        throw std::runtime_error("Locked by another PopGenA process: " + utf8(path));
+    return lock;
 }
-void atomic_text(const fs::path& path,const std::string& content) {
-    if(fs::is_regular_file(path)&&read_text(path)==content)return;
-    auto temp=path;temp+=from_utf8(".tmp-"+unique_id());
+
+// Write to a temporary sibling, flush it to disk, then rename over the target.
+void atomic_text(const fs::path& path, const std::string& content) {
+    if (fs::is_regular_file(path) && read_text(path) == content) return;
+    auto temp = path;
+    temp += ".tmp-" + unique_id();
     try {
-        write_text(temp,content);
-        if(!MoveFileExW(temp.c_str(),path.c_str(),MOVEFILE_REPLACE_EXISTING|MOVEFILE_WRITE_THROUGH))win_error("Publish metadata "+utf8(path));
-    } catch(...) {std::error_code ec;fs::remove(temp,ec);throw;}
-}
-json file_identity(const fs::path& path,bool full) {
-    if(!fs::is_regular_file(path))throw std::runtime_error("Required file missing: "+utf8(path));
-    auto p=fs::canonical(path);auto size=fs::file_size(p);auto time=fs::last_write_time(p);
-    json id={{"path",utf8(p)},{"size",size},{"mtime",time.time_since_epoch().count()}};
-    if(full||size<=16*1024*1024)id["sha256"]=sha256(p);
-    if(size!=fs::file_size(p)||time!=fs::last_write_time(p))throw std::runtime_error("File changed while identifying it: "+utf8(p));
-    return id;
-}
-std::string ninja_path(const std::string& path) {
-    std::string out;
-    for(char c:path) {
-        if(c=='\n'||c=='\r'||c=='\0'||c=='|')throw std::runtime_error("Unsupported character in Ninja path");
-        if(c=='$'||c==' '||c==':')out+='$';
-        out+=c;
+        Fd fd(::open(temp.c_str(), O_WRONLY | O_CREAT | O_EXCL | O_CLOEXEC, 0644));
+        if (fd.get() < 0) sys_error("Create " + utf8(temp));
+        for (size_t written = 0; written < content.size();) {
+            auto n = ::write(fd.get(), content.data() + written, content.size() - written);
+            if (n < 0) {
+                if (errno == EINTR) continue;
+                sys_error("Write " + utf8(temp));
+            }
+            written += static_cast<size_t>(n);
+        }
+        if (::fsync(fd.get()) != 0) sys_error("Flush " + utf8(temp));
+        fs::rename(temp, path);
+    } catch (...) {
+        std::error_code ec;
+        fs::remove(temp, ec);
+        throw;
     }
-    return out;
+}
+
+json file_identity(const fs::path& path, bool full) {
+    if (!fs::is_regular_file(path)) throw std::runtime_error("Required file missing: " + utf8(path));
+    auto p = fs::canonical(path);
+    auto size = fs::file_size(p);
+    auto time = fs::last_write_time(p);
+    json id = {{"path", utf8(p)}, {"size", size}, {"mtime", time.time_since_epoch().count()}};
+    if (full || size <= 16 * 1024 * 1024) id["sha256"] = sha256(p);
+    if (size != fs::file_size(p) || time != fs::last_write_time(p))
+        throw std::runtime_error("File changed while identifying it: " + utf8(p));
+    return id;
 }
 }

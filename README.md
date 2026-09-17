@@ -1,36 +1,50 @@
-# PopGenA — native Windows C++ population genomics
+# PopGenA — native Linux C++ population genomics
 
-The implementation provides streaming VCF/BCF statistics, resumable native workflows, an offline-validated genotype QC, relatedness, LD-pruning and PCA path, and a native paired-FASTQ-to-genotype workflow. It runs as a native Windows x64 CLI with PowerShell and Git Bash entry points. Linux implementation is a separate future effort.
+Continuing development in a new agent/session? Read [HANDOFF.md](HANDOFF.md)
+for the current state, evidence, remaining work and resume commands.
+
+PopGenA provides streaming VCF/BCF statistics, resumable native workflows, an
+offline-validated genotype QC, relatedness, LD-pruning and PCA path, and a
+paired-FASTQ-to-genotype workflow. It is a C++20 command-line program for
+x86-64 Linux (developed on WSL2, Ubuntu 26.04, GCC 15).
 
 ## Build and run
 
-From PowerShell in this directory:
-
-```powershell
-./tools/bootstrap.ps1   # explicit one-time native tool/dependency download
-./make.ps1              # GNU Make -> Ninja -> C++20 executable
-./make.ps1 check        # C++ tests + independent golden/integration checks
-./make.ps1 run          # tiny offline fixture -> out/demo
-./make.ps1 doctor       # dependency report
-./make.ps1 plan         # review offline BCF conversion -> statistics workflow
-./make.ps1 workflow     # execute/resume that workflow
-./make.ps1 genotype-plan # review offline QC/PCA workflow
-./make.ps1 genotype      # execute/resume its 15 tasks
-./make.ps1 reads-plan    # review offline paired-FASTQ workflow
-./make.ps1 reads         # execute/resume its 40 tasks
+```bash
+make            # build every native dependency from vendored sources, then build/popgen
+make check      # unit tests + all offline integration suites
+make run        # tiny offline fixture -> out/demo
+make doctor     # dependency versions and tool resolution
+make plan       # review the offline BCF conversion -> statistics workflow
+make workflow   # execute/resume that workflow
+make genotype   # execute/resume the 15-task synthetic QC/PCA workflow (genotype-plan to review)
+make reads      # execute/resume the 40-task synthetic FASTQ workflow (reads-plan to review)
+make benchmark  # streaming statistics benchmark (SAMPLES=, SITES=)
+make help       # every target
 ```
 
-The launcher changes PATH only for its own process. No WSL, Python, Julia, CMake, administrator installation, or global environment change is required. Windows 10 version 1903 or newer (UTF-8 application code page), PowerShell, and a tar executable with Zstandard support are required. Bootstrap uses HTTPS and verifies every archive against `tools/windows-packages.lock.json`. The entire compiler and native dependency closure is project-local under `.deps/`; archives remain in `.cache/` for repeat setup. Allow several GB of disk space for the toolchain and cache.
+A single `make` works offline. Pinned upstream **source archives** for every
+external tool live in `third_party/src/` (checked against `SHA256SUMS`) and are
+built into the ignored `.deps/linux/` directory: HTSlib, bcftools and samtools
+1.24; PLINK 2.0 a.7.6 with OpenBLAS; fastp 1.3.3 with ISA-L, libdeflate and
+Highway; Bowtie2 2.5.5; Ninja; jq. The first build takes several minutes; later
+builds only redo what changed. Nothing is downloaded, and no command above
+downloads sequencing data.
 
-Normal builds and checks are offline after bootstrap. No command above downloads sequencing data. `tools/resolve-dependencies.ps1` is a maintainer operation that deliberately refreshes the package lock; do not run it for ordinary builds. Native libraries are the pinned Windows distribution builds, not reused Linux artifacts.
+System prerequisites: `gcc`/`g++` with C++20, GNU `make`, `perl`, and the zlib,
+bzip2, liblzma and OpenSSL development headers (Debian/Ubuntu:
+`build-essential zlib1g-dev libbz2-dev liblzma-dev libssl-dev`). No Python,
+CMake, Julia or administrator-installed bioinformatics tools are needed.
 
-`make.ps1` forwards arguments to native GNU Make, including `NPROC=2` and `OUT=out/another-demo`. If native Make is already configured with the dependency bin directory on PATH, the same Makefile targets work directly. `clean` removes compilation outputs while preserving data/results/dependencies. `compile-commands` exports editor metadata.
+`make clean` removes compilation outputs only; `make deps-clean` removes
+`.deps/linux` (rebuilt by the next `make`). `work/` and `out/` hold data and
+results and are never cleaned by the build.
 
-Run the executable directly from PowerShell:
+Run the executable directly (or through the `./popgen` launcher):
 
-```powershell
-./build/popgen.exe stats --input tests/fixtures/cohort.vcf `
-  --samples tests/fixtures/samples.tsv --out out/my-analysis `
+```bash
+build/popgen stats --input tests/fixtures/cohort.vcf \
+  --samples tests/fixtures/samples.tsv --out out/my-analysis \
   --min-dp 10 --min-gq 20 --threads 2
 ```
 
@@ -38,7 +52,7 @@ Run the executable directly from PowerShell:
 
 Results are written to a temporary sibling directory, validated and then renamed into place. Existing outputs are refused unless `--replace` is supplied. Replacement is restricted to a recognized, completed PopGenA result directory containing only the expected files. Old results remain intact if input parsing or analysis fails. As with a two-rename directory replacement, a hard process/power failure during publication may leave a `.popgen-backup-*` directory requiring recovery; do not delete it without inspecting it.
 
-Progress/errors go to stderr, and the JSON result goes to stdout. The binary includes its Windows runtime DLLs beside it in `build/`; keep those together when launching it outside the project. Redistribution requires preserving the native dependencies' license obligations; see `third_party/NOTICE.md`.
+Progress/errors go to stderr, and the JSON result goes to stdout. Redistribution of built binaries requires preserving the dependencies' license obligations; see `third_party/NOTICE.md`.
 
 ## Results and scientific contract
 
@@ -52,6 +66,9 @@ See [scientific definitions](docs/STATISTICS.md) for exact denominators and sele
 
 ## Status
 
-Build, statistics, workflows and the bounded genotype QC/PCA path are implemented. See [genotype configuration and scientific contract](docs/GENOTYPES.md), [workflow recovery](docs/WORKFLOWS.md), and [Git Bash entry points](docs/GIT_BASH.md). ENA discovery and size/checksum-verified acquisition are implemented as explicit PowerShell tools; see [acquisition](docs/ACQUISITION.md). Native raw-read preprocessing/alignment/joint calling is implemented and tested on synthetic data; see [raw-read configuration](docs/READS.md). Real-data validation, optional figures and scaling remain planned in [PLAN.md](PLAN.md). Reference projects are not runtime dependencies.
+See [validation scope and measured resources](docs/VALIDATION.md) and
+[numerical backend choices](docs/NUMERICAL_BACKENDS.md) for the ALGLIB/PLINK2
+assessment. A 100,000-person streaming statistics benchmark does not imply
+100,000-person PCA support.
 
-HTSlib, bcftools, samtools and PLINK2 are pinned native Windows tools. Bootstrap verifies the additional PLINK2 archive and executable against `tools/plink2.lock.json`. The genotype demo is synthetic; no real human sequencing dataset has been downloaded or analyzed. The raw-read path pins a community Windows fastp build and official native Bowtie2; BWA is not installed. See [tool origins and limitations](docs/NATIVE_TOOLS.md).
+Build, statistics, workflows and the bounded genotype QC/PCA path are implemented; see [genotype configuration and scientific contract](docs/GENOTYPES.md) and [workflow execution and recovery](docs/WORKFLOWS.md). ENA discovery and size/checksum-verified acquisition are bash tools; see [acquisition](docs/ACQUISITION.md). Raw-read preprocessing, alignment and joint calling are implemented and tested on synthetic data; see [raw-read configuration](docs/READS.md). A bounded public 200-person genotype subset has passed QC/PCA and independent-count validation, and the Linux build reproduces the earlier Windows results exactly. Actual human FASTQ accuracy remains unvalidated; BWA is not installed. Remaining work is in [HANDOFF.md](HANDOFF.md) and [PLAN.md](PLAN.md).

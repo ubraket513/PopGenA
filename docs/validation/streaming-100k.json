@@ -1,0 +1,43 @@
+{
+    "samples":  100000,
+    "sites":  10000,
+    "stats":  {
+                  "cancelled":  false,
+                  "cpu_kernel_ms":  2218,
+                  "cpu_user_ms":  24968,
+                  "elapsed_ms":  23948,
+                  "exit_codes":  [
+                                     0
+                                 ],
+                  "io_read_bytes":  597773816,
+                  "io_write_bytes":  7219068,
+                  "peak_job_committed_bytes":  46845952,
+                  "timed_out":  false
+              },
+    "checked_counts":  {
+                           "alternate_alleles":  649987587,
+                           "called":  989998328,
+                           "heterozygous":  349985015,
+                           "missing":  10001672,
+                           "purpose":  "synthetic streaming throughput only",
+                           "samples":  100000,
+                           "sites":  10000
+                       },
+    "retained_work_bytes":  302623696,
+    "generate":  {
+                     "cancelled":  false,
+                     "cpu_kernel_ms":  4687,
+                     "cpu_user_ms":  180078,
+                     "elapsed_ms":  191488,
+                     "exit_codes":  [
+                                        0
+                                    ],
+                     "io_read_bytes":  0,
+                     "io_write_bytes":  295278844,
+                     "peak_job_committed_bytes":  22425600,
+                     "timed_out":  false
+                 },
+    "scope":  "Streaming statistics only; no KING/PCA scalability claim",
+    "memory_metric":  "Windows job peak committed bytes, not RSS",
+    "genotypes":  1000000000
+}

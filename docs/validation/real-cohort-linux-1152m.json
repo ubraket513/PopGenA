@@ -1,0 +1,180 @@
+{
+  "prepared": {
+    "source_lock_sha256": "abe9ceee86be4635013a78a5db48e3fc9c689bdf3dd1fd270088f8900fb3d66c",
+    "prepared_utc": "2026-09-17T12:49:30Z",
+    "samples": 200,
+    "sites": 22817,
+    "reference_sha256": "c218d98e3bf58fa3551c3f5f12bc829c798c42fd301f8ed6021c35aa231f39f8",
+    "input_sha256": "92a929b8b8c52e164c6d718a2b36c1fd4be1610eff48d6308cc80ad63bae1d3c",
+    "selection": "40 lexicographically first IDs in each of AFR, AMR, EAS, EUR, SAS from the original 2504 panel; chr21:15000000-16000000 PASS biallelic SNPs",
+    "quality_policy": "Phased release GT only; DP/GQ filters explicitly disabled, not synthesized",
+    "acquisition": "Indexed byte ranges: index MD5 verified, source whole-file MD5 not verified; per-range SHA256 recorded",
+    "scope": "Single-region integration check; not genome-wide relatedness or population inference"
+  },
+  "retained_samples": 200,
+  "independent_sample_counts_match": true,
+  "independent_fields": [
+    "called",
+    "heterozygous",
+    "alt_alleles",
+    "missing"
+  ],
+  "pca": {
+    "eigenvalues": [
+      30.3756,
+      13.1513,
+      9.74723,
+      7.00139,
+      5.95731
+    ],
+    "markers": 127,
+    "method": "PLINK2 exact variance-standardized PCA with mean imputation",
+    "pcs": 5,
+    "relative_eigenpair_residual": [
+      0.00000164533223097517,
+      0.0000017680068906206016,
+      0.0000013568447614279362,
+      0.0000013213879402174112,
+      0.0000016650372958543388
+    ],
+    "samples": 200,
+    "validated": true
+  },
+  "tasks": [
+    {
+      "task": "bcf",
+      "elapsed_ms": 504,
+      "max_rss_bytes": 5328896,
+      "cpu_user_ms": 469,
+      "cpu_system_ms": 11
+    },
+    {
+      "task": "import",
+      "elapsed_ms": 242,
+      "max_rss_bytes": 27881472,
+      "cpu_user_ms": 269,
+      "cpu_system_ms": 81
+    },
+    {
+      "task": "king",
+      "elapsed_ms": 20,
+      "max_rss_bytes": 14471168,
+      "cpu_user_ms": 7,
+      "cpu_system_ms": 7
+    },
+    {
+      "task": "mask",
+      "elapsed_ms": 463,
+      "max_rss_bytes": 10063872,
+      "cpu_user_ms": 420,
+      "cpu_system_ms": 12
+    },
+    {
+      "task": "missing",
+      "elapsed_ms": 20,
+      "max_rss_bytes": 12820480,
+      "cpu_user_ms": 3,
+      "cpu_system_ms": 10
+    },
+    {
+      "task": "normalize",
+      "elapsed_ms": 303,
+      "max_rss_bytes": 6389760,
+      "cpu_user_ms": 276,
+      "cpu_system_ms": 4
+    },
+    {
+      "task": "pca",
+      "elapsed_ms": 20,
+      "max_rss_bytes": 15798272,
+      "cpu_user_ms": 6,
+      "cpu_system_ms": 9
+    },
+    {
+      "task": "pca-check",
+      "elapsed_ms": 20,
+      "max_rss_bytes": 7626752,
+      "cpu_user_ms": 2,
+      "cpu_system_ms": 0
+    },
+    {
+      "task": "prune",
+      "elapsed_ms": 20,
+      "max_rss_bytes": 13598720,
+      "cpu_user_ms": 8,
+      "cpu_system_ms": 5
+    },
+    {
+      "task": "retained",
+      "elapsed_ms": 282,
+      "max_rss_bytes": 42315776,
+      "cpu_user_ms": 506,
+      "cpu_system_ms": 66
+    },
+    {
+      "task": "sample-qc",
+      "elapsed_ms": 41,
+      "max_rss_bytes": 24825856,
+      "cpu_user_ms": 16,
+      "cpu_system_ms": 29
+    },
+    {
+      "task": "select",
+      "elapsed_ms": 20,
+      "max_rss_bytes": 8540160,
+      "cpu_user_ms": 5,
+      "cpu_system_ms": 0
+    },
+    {
+      "task": "site-qc",
+      "elapsed_ms": 41,
+      "max_rss_bytes": 27070464,
+      "cpu_user_ms": 18,
+      "cpu_system_ms": 29
+    },
+    {
+      "task": "stats",
+      "elapsed_ms": 383,
+      "max_rss_bytes": 12107776,
+      "cpu_user_ms": 404,
+      "cpu_system_ms": 11
+    },
+    {
+      "task": "validate",
+      "elapsed_ms": 81,
+      "max_rss_bytes": 9019392,
+      "cpu_user_ms": 58,
+      "cpu_system_ms": 4
+    }
+  ],
+  "last_run": {
+    "process": {
+      "cancelled": false,
+      "cpu_system_ms": 415,
+      "cpu_user_ms": 2866,
+      "elapsed_ms": 3585,
+      "exit_codes": [
+        0
+      ],
+      "max_rss_bytes": 42315776,
+      "timed_out": false
+    },
+    "reused_tasks": 0,
+    "scheduled_tasks": 15,
+    "status": "complete",
+    "work_dir": "/home/dzk55/bioinformatics/PopGenA/work/real-validation-linux/analysis"
+  },
+  "retained_analysis_bytes": 125978658,
+  "memory_metric": "Peak RSS of the largest process per task (getrusage), not the sum across a pipeline",
+  "scope": "Single chromosome interval integration only; not population structure or whole-genome accuracy",
+  "platform": "linux-x86_64 (WSL2), tools built from third_party/src",
+  "comparison_with_windows": {
+    "reference": "docs/validation/real-cohort-1152m.json (Windows, prebuilt PLINK2)",
+    "statistics_tsvs_byte_identical": true,
+    "pca_eigenvalues_identical": true,
+    "pca_eigenvectors_identical_ignoring_line_endings": true,
+    "ld_pruned_markers_identical_ignoring_line_endings": true,
+    "cohort_bcf_records_and_samples_identical": true,
+    "note": "Windows PLINK wrote CRLF line endings; the Linux build writes LF. The prepared cohort.bcf decodes to identical records and samples; its header differs only in the ##bcftools_viewCommand line (paths and date)."
+  }
+}

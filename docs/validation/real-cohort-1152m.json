@@ -1,0 +1,202 @@
+{
+    "pca":  {
+                "eigenvalues":  [
+                                    30.3756,
+                                    13.1513,
+                                    9.74723,
+                                    7.00139,
+                                    5.95731
+                                ],
+                "markers":  127,
+                "method":  "PLINK2 exact variance-standardized PCA with mean imputation",
+                "pcs":  5,
+                "relative_eigenpair_residual":  [
+                                                    1.64533223097517E-06,
+                                                    1.7680068906206016E-06,
+                                                    1.3568447614279362E-06,
+                                                    1.3213879402174112E-06,
+                                                    1.6650372958543388E-06
+                                                ],
+                "samples":  200,
+                "validated":  true
+            },
+    "retained_samples":  200,
+    "last_run":  {
+                     "process":  {
+                                     "cancelled":  false,
+                                     "cpu_kernel_ms":  3218,
+                                     "cpu_user_ms":  6187,
+                                     "elapsed_ms":  9911,
+                                     "exit_codes":  [
+                                                        0
+                                                    ],
+                                     "io_read_bytes":  1637062404,
+                                     "io_write_bytes":  130846831,
+                                     "peak_job_committed_bytes":  953372672,
+                                     "timed_out":  false
+                                 },
+                     "reused_tasks":  0,
+                     "scheduled_tasks":  15,
+                     "status":  "complete",
+                     "work_dir":  "C:\\PopGenA\\PopGenA\\work\\real-validation\\analysis-1152m"
+                 },
+    "memory_metric":  "Peak committed bytes, not RSS",
+    "independent_sample_counts_match":  true,
+    "scope":  "Single chromosome interval integration only; not population structure or whole-genome accuracy",
+    "prepared":  {
+                     "samples":  200,
+                     "sites":  22817,
+                     "prepared_utc":  "2026-09-17T10:46:50.5709451Z",
+                     "selection":  "40 lexicographically first IDs in each of AFR, AMR, EAS, EUR, SAS from the original 2504 panel; chr21:15000000-16000000 PASS biallelic SNPs",
+                     "quality_policy":  "Phased release GT only; DP/GQ filters explicitly disabled, not synthesized",
+                     "input_sha256":  "0422d6be06ecbb16887b20fd042869fca62a03ef9be9f83a34273dd755aadea1",
+                     "reference_sha256":  "c218d98e3bf58fa3551c3f5f12bc829c798c42fd301f8ed6021c35aa231f39f8",
+                     "source_lock_sha256":  "c6a7f20ed8d08165bd4400d2ef066a360cfc6eada4e4336f8e6a03f044c3e1ab",
+                     "scope":  "Single-region integration check; not genome-wide relatedness or population inference",
+                     "acquisition":  "Indexed byte ranges: index MD5 verified, source whole-file MD5 not verified; per-range SHA256 recorded"
+                 },
+    "retained_analysis_bytes":  127555728,
+    "tasks":  [
+                  {
+                      "task":  "bcf",
+                      "elapsed_ms":  807,
+                      "peak_job_committed_bytes":  7618560,
+                      "cpu_user_ms":  656,
+                      "cpu_kernel_ms":  125,
+                      "io_read_bytes":  3843346,
+                      "io_write_bytes":  2909757
+                  },
+                  {
+                      "task":  "import",
+                      "elapsed_ms":  410,
+                      "peak_job_committed_bytes":  744075264,
+                      "cpu_user_ms":  421,
+                      "cpu_kernel_ms":  62,
+                      "io_read_bytes":  11200022,
+                      "io_write_bytes":  29605036
+                  },
+                  {
+                      "task":  "king",
+                      "elapsed_ms":  96,
+                      "peak_job_committed_bytes":  744120320,
+                      "cpu_user_ms":  15,
+                      "cpu_kernel_ms":  62,
+                      "io_read_bytes":  27884453,
+                      "io_write_bytes":  62694
+                  },
+                  {
+                      "task":  "mask",
+                      "elapsed_ms":  732,
+                      "peak_job_committed_bytes":  9859072,
+                      "cpu_user_ms":  578,
+                      "cpu_kernel_ms":  46,
+                      "io_read_bytes":  5908134,
+                      "io_write_bytes":  2941036
+                  },
+                  {
+                      "task":  "missing",
+                      "elapsed_ms":  93,
+                      "peak_job_committed_bytes":  744062976,
+                      "cpu_user_ms":  46,
+                      "cpu_kernel_ms":  15,
+                      "io_read_bytes":  26884025,
+                      "io_write_bytes":  648041
+                  },
+                  {
+                      "task":  "normalize",
+                      "elapsed_ms":  469,
+                      "peak_job_committed_bytes":  10391552,
+                      "cpu_user_ms":  421,
+                      "cpu_kernel_ms":  62,
+                      "io_read_bytes":  4440552,
+                      "io_write_bytes":  2998920
+                  },
+                  {
+                      "task":  "pca",
+                      "elapsed_ms":  113,
+                      "peak_job_committed_bytes":  946761728,
+                      "cpu_user_ms":  0,
+                      "cpu_kernel_ms":  62,
+                      "io_read_bytes":  26774916,
+                      "io_write_bytes":  17303
+                  },
+                  {
+                      "task":  "pca-check",
+                      "elapsed_ms":  93,
+                      "peak_job_committed_bytes":  3780608,
+                      "cpu_user_ms":  46,
+                      "cpu_kernel_ms":  0,
+                      "io_read_bytes":  4014,
+                      "io_write_bytes":  113
+                  },
+                  {
+                      "task":  "prune",
+                      "elapsed_ms":  122,
+                      "peak_job_committed_bytes":  744120320,
+                      "cpu_user_ms":  15,
+                      "cpu_kernel_ms":  46,
+                      "io_read_bytes":  27721304,
+                      "io_write_bytes":  41634
+                  },
+                  {
+                      "task":  "retained",
+                      "elapsed_ms":  432,
+                      "peak_job_committed_bytes":  744108032,
+                      "cpu_user_ms":  562,
+                      "cpu_kernel_ms":  156,
+                      "io_read_bytes":  79891216,
+                      "io_write_bytes":  30477817
+                  },
+                  {
+                      "task":  "sample-qc",
+                      "elapsed_ms":  177,
+                      "peak_job_committed_bytes":  744095744,
+                      "cpu_user_ms":  93,
+                      "cpu_kernel_ms":  78,
+                      "io_read_bytes":  53386016,
+                      "io_write_bytes":  26764550
+                  },
+                  {
+                      "task":  "select",
+                      "elapsed_ms":  73,
+                      "peak_job_committed_bytes":  4194304,
+                      "cpu_user_ms":  78,
+                      "cpu_kernel_ms":  31,
+                      "io_read_bytes":  69492,
+                      "io_write_bytes":  15558
+                  },
+                  {
+                      "task":  "site-qc",
+                      "elapsed_ms":  156,
+                      "peak_job_committed_bytes":  744062976,
+                      "cpu_user_ms":  46,
+                      "cpu_kernel_ms":  78,
+                      "io_read_bytes":  53386016,
+                      "io_write_bytes":  26764441
+                  },
+                  {
+                      "task":  "stats",
+                      "elapsed_ms":  1025,
+                      "peak_job_committed_bytes":  10571776,
+                      "cpu_user_ms":  843,
+                      "cpu_kernel_ms":  109,
+                      "io_read_bytes":  11489633,
+                      "io_write_bytes":  5667409
+                  },
+                  {
+                      "task":  "validate",
+                      "elapsed_ms":  204,
+                      "peak_job_committed_bytes":  6578176,
+                      "cpu_user_ms":  125,
+                      "cpu_kernel_ms":  62,
+                      "io_read_bytes":  2977013,
+                      "io_write_bytes":  433
+                  }
+              ],
+    "independent_fields":  [
+                               "called",
+                               "heterozygous",
+                               "alt_alleles",
+                               "missing"
+                           ]
+}

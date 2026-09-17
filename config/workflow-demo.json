@@ -6,7 +6,7 @@
     "cohort": "../tests/fixtures/cohort.vcf",
     "samples": "../tests/fixtures/samples.tsv"
   },
-  "tools": {"bcftools": {"path": "bcftools.exe", "version_args": ["--version"]}},
+  "tools": {"bcftools": {"path": "bcftools", "version_args": ["--version"]}},
   "tasks": [
     {
       "id": "convert", "kind": "command", "pool": "heavy", "memory_mb": 512,

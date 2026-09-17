@@ -1,29 +1,29 @@
 # ENA discovery and bounded acquisition
 
-These PowerShell tools prepare reviewed paired FASTQ inputs for milestone 5.
+These bash tools prepare reviewed paired FASTQ inputs for milestone 5.
 They do not perform trimming, alignment, calling, or population inference.
 Discovery downloads metadata only. Acquisition defaults to a plan and requires
-both an explicit byte budget and `-Download` before fetching biological files.
+both an explicit byte budget and `--download` before fetching biological files.
 
-```powershell
+```bash
 # Metadata only; output must be a new directory.
-.\tools\discover-ena.ps1 -Out out\ena-metadata
+tools/discover-ena.sh --out out/ena-metadata
 
 # Inspect metadata.tsv and catalog.json, select runs, and provide an explicit mapping.
-.\tools\discover-ena.ps1 -Out out\ena-selected -Run ERR3239276 `
-  -Mapping samples-to-individuals.tsv -ReferenceAssembly GRCh38 `
-  -ReferenceSha256 <SHA256-of-your-reference-FASTA>
+tools/discover-ena.sh --out out/ena-selected --run ERR3239276 \
+  --mapping samples-to-individuals.tsv --reference-assembly GRCh38 \
+  --reference-sha256 <SHA256-of-your-reference-FASTA>
 
 # Review the plan. This creates no output directory and downloads no FASTQs.
-.\tools\acquire.ps1 -Manifest out\ena-selected\manifest.json `
-  -Out data\fastq -MaxBytes 40000000000
+tools/acquire.sh --manifest out/ena-selected/manifest.json \
+  --out data/fastq --max-bytes 40000000000
 
 # Fetch exactly the reviewed request when ready.
-.\tools\acquire.ps1 -Manifest out\ena-selected\manifest.json `
-  -Out data\fastq -MaxBytes 40000000000 -Download
+tools/acquire.sh --manifest out/ena-selected/manifest.json \
+  --out data/fastq --max-bytes 40000000000 --download
 ```
 
-The default study is PRJEB31736. `-Run` restricts the executable manifest to
+The default study is PRJEB31736. `--run` (repeatable) restricts the executable manifest to
 selected run accessions; without it all reported runs are selected. Byte budgets
 cover the entire manifest, including already-present files. A single run can
 already exceed 25 GB, so the examples are illustrative, not an instruction to
@@ -52,7 +52,7 @@ retains the complete fetched report; `catalog.json` contains selected records.
 
 Acquisition allows only HTTPS on `ftp.sra.ebi.ac.uk`, with canonical ENA FASTQ
 paths and no credentials, query, fragment, alternate port, or redirects. It
-generates filenames from validated run and mate IDs, rejects reparse paths,
+generates filenames from validated run and mate IDs, rejects symlinked paths,
 checks request size and free disk space (plus a 64 MiB reserve), and downloads
 one file at a time with a 1 MiB buffer. A file becomes visible under its final
 name only after exact byte count and streaming MD5 verification and a same-folder
@@ -67,7 +67,7 @@ MD5 verifies ENA's published checksum and accidental corruption; it is not a
 cryptographic provenance signature. There are no embedded credentials and no
 network fallback to alternate hosts or protocols.
 
-Run `powershell -NoProfile -ExecutionPolicy Bypass -File tests/acquisition.ps1`
+Run `bash tests/acquisition.sh` (part of `make check`)
 for synthetic offline checks of manifests, mapping, budgets, checksum reuse,
 corrupt-existing preservation and rejection before publication. A process-local
 in-memory HTTP transport exercises the real downloader with correct, truncated,

@@ -14,14 +14,18 @@ struct StatsOptions {
     bool replace = false;
 };
 struct Counts {
-    uint64_t called=0, het=0, alt=0, missing=0, filtered=0, unsupported=0;
+    uint64_t called = 0, het = 0, alt = 0, missing = 0, filtered = 0, unsupported = 0;
     void add(const Counts& other);
 };
 std::string utf8(const fs::path& path);
-inline fs::path from_utf8(const std::string& s) { return fs::path(std::u8string(s.begin(),s.end())); }
+inline fs::path from_utf8(const std::string& s) {
+    return fs::path(std::u8string(s.begin(), s.end()));
+}
 std::vector<std::string> arguments();
 std::string read_text(const fs::path& path);
 void write_text(const fs::path& path, const std::string& value);
+// Atomic rename that fails instead of replacing an existing destination.
+void rename_no_replace(const fs::path& from, const fs::path& to);
 std::string sha256(const fs::path& path);
 std::string unique_id();
 std::string ratio(uint64_t numerator, uint64_t denominator);

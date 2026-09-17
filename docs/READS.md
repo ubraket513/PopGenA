@@ -1,25 +1,23 @@
-# Native Windows paired-read workflow
+# Paired-read workflow
 
-The `reads` workflow runs fastp, Bowtie2, samtools and bcftools as native Windows
-processes. It ends at a normalized, quality-masked autosomal SNP BCF plus CSI and
+The `reads` workflow runs fastp, Bowtie2, samtools and bcftools, all built
+from the vendored sources by `make`. It ends at a normalized, quality-masked autosomal SNP BCF plus CSI and
 streaming statistics. It does not automatically run population QC or PCA.
 
 ## Offline example
 
-After explicit `./tools/bootstrap.ps1`, run from the project directory:
+After `make`, run from the project directory:
 
-```powershell
-./make.ps1 reads-plan
-./make.ps1 reads
-./make.ps1 reads  # reuse all 40 tasks
+```bash
+make reads-plan
+make reads
+make reads  # reuse all 40 tasks
 ```
 
-Git Bash uses `bash ./make.sh reads`, or
-`bash ./popgen run --config config/reads-demo.json`. These commands use only the
-committed synthetic fixture. No sequencing data is downloaded.
+These commands use only the committed synthetic fixture. No sequencing data is downloaded.
 
 For your own inputs, copy `config/reads-demo.json`, edit the paths and identities,
-then use `popgen.exe plan --config PATH` followed by `run --config PATH`.
+then use `build/popgen plan --config PATH` followed by `run --config PATH`.
 Relative input and work paths resolve against the configuration directory.
 
 ## Input contract and configuration
@@ -53,7 +51,7 @@ one row per configured individual. Omission assigns population `ALL`.
 | Processing option | Default | Meaning |
 |---|---:|---|
 | `threads` | 2 | Tool worker count, 1–4 |
-| `memory_mb` | 6144 | Per-task process-tree committed-memory limit, 1024–10240 |
+| `memory_mb` | 6144 | Per-task memory reservation used for planning and tool flags, 1024–10240 |
 | `timeout_seconds` | 3600 | Per-task timeout |
 | `min_length` | 35 | Minimum trimmed read length |
 | `qualified_quality` | 20 | fastp quality threshold |
@@ -82,8 +80,9 @@ remain on disk. Reference parsing can allocate one whole contig; process memory
 limits still apply. Full human-reference feasibility has not been measured.
 
 Optional `tools` overrides paths for `fastp`, `bowtie2`, `bowtie2-build`,
-`samtools`, `bcftools`. Overrides require compatible native Windows builds and
-revalidation; the supplied defaults are the versions in `NATIVE_TOOLS.md`.
+`samtools`, `bcftools`. Bare names resolve to `.deps/linux/prefix/bin` first. Overrides require
+revalidation; the defaults are the vendored versions listed in `third_party/NOTICE.md`
+(Bowtie2 runs as `bowtie2-align-s`, which switches to its AVX2 build on x86-64-v3 CPUs).
 
 ## Processing and scientific boundary
 
@@ -129,13 +128,14 @@ to the bams result's samples.tsv, and use the same assembly label. Choose a new
 work directory and cohort-appropriate QC/analysis settings. The three-sample raw
 fixture is deliberately too small for the genotype path's 50-sample LD gate.
 
-Windows compatibility adapters are explicit: BAM paths are passed as native
-arguments because this bcftools build does not decode UTF-8 BAM-list paths
-correctly. Very long aggregate command lines can still exceed Windows limits;
-keep work paths short. The original fastp report is retained because its final
-command field may contain unescaped Windows paths. The adapter removes only
-that invalid command value, validates paired counts and emits valid fastp.json
-with a repair annotation. Exact argv remains in task attempt provenance.
+Two adapters are explicit. BAM paths are passed to `bcftools mpileup` as
+arguments rather than a `-b` list file, so the attempt record holds the exact
+inputs. fastp 1.3.3 writes its final command field without JSON escaping, so a
+path containing `"` or `\` makes the report invalid; the original report is
+retained as `fastp.raw.json`, and the adapter removes only that invalid command
+value, validates paired counts and emits valid fastp.json with a repair
+annotation (`unescaped_command_removed`). Exact argv remains in task attempt
+provenance.
 
 See WORKFLOWS.md for failure logs, cancellation, integrity checks and recovery.
 Changing mask thresholds reruns mask/statistics without repeating alignment or
@@ -143,7 +143,7 @@ calling. No automatic deletion of old generations is performed.
 
 ## Validation scope
 
-`tests/reads.ps1` uses five runs, three individuals, four libraries and three
+`tests/reads.sh` uses five runs, three individuals, four libraries and three
 independently specified SNP truths. It checks all genotype/depth values,
 cross-run duplicate marking, independent-library preservation, zero-coverage
 missingness, one low-quality pair removed per run, metadata and CSI queries.

@@ -1,9 +1,36 @@
 # PopGenA clean implementation plan
 
 Prepared 2026-09-17 after inspecting the local references with Serena MCP.
-Status: milestones 1–3 and the bounded genotype QC/PCA path of milestone 4 are implemented. Milestone 5 metadata discovery and bounded acquisition are implemented; native raw-read preprocessing/alignment/joint calling are now implemented and synthetic-fixture validated. Real-data validation/scaling remain planned.
+Status (Linux, 2026-09-17): milestones 1–3 and the bounded genotype QC/PCA path of milestone 4 are implemented. Milestone 5 metadata discovery and bounded acquisition are implemented; native raw-read preprocessing/alignment/joint calling are now implemented and synthetic-fixture validated. A bounded real-genotype run and 100k-person streaming-statistics benchmark are validated; real FASTQ accuracy, genome-wide analysis and large-cohort PCA remain planned.
 
-## Implementation update
+## Linux migration update, 2026-09-17
+
+The project moved to `/home/dzk55/bioinformatics/PopGenA` on WSL2 (Ubuntu 26.04,
+GCC 15.2) and now targets Linux only. The reference repositories were deleted.
+
+- One offline `make` builds everything: pinned upstream source archives in
+  `third_party/src` (SHA256SUMS) for HTSlib/bcftools/samtools 1.24, PLINK2 a.7.6
+  (plink-ng `1c68b8c`, `alpha7_patch`) with OpenBLAS 0.3.34, fastp 1.3.3 with
+  ISA-L/libdeflate/Highway/NASM, Bowtie2 2.5.5, Ninja 1.13.2 and jq 1.8.1 are
+  built into `.deps/linux` by `mk/deps.mk` and `mk/plink2.mk`, then `build/popgen`.
+- The Windows process layer was replaced by POSIX: pipelines in a process group
+  (`fork`/`execve`, SIGTERM then SIGKILL), parent-death signals so killing the
+  runner reaches every descendant, `flock` locks, `fsync`+rename metadata,
+  `renameat2(RENAME_NOREPLACE)` publication, OpenSSL SHA256. Memory caps and I/O
+  counters were dropped by decision; tasks record CPU time and peak RSS.
+- All PowerShell tests/tools were ported to bash (`tests/*.sh`, `tools/*.sh`); the
+  fixture generators reproduce the committed fixtures byte for byte. `make check`
+  runs unit tests and six integration suites.
+- The real 200-person chr21 validation was rebuilt offline from the verified
+  Windows range cache and reproduced statistics, PCA and pruning exactly; the
+  100k-person streaming benchmark was re-measured. See `docs/VALIDATION.md`.
+- Removed Windows files are archived in the ignored `work/windows-legacy.tar.gz`.
+
+Everything below is the Windows-era plan and implementation record, kept for
+history. Where it mentions PowerShell, MSYS2, Job Objects, `.exe` or Git Bash,
+the Linux equivalents above apply.
+
+## Windows implementation record (historical)
 
 - Native Windows UCRT64 GCC, GNU Make and Ninja are installed project-locally from 47 version/hash-locked packages. HTSlib, bcftools and samtools 1.24 Windows binaries run successfully. These are pinned distribution builds; HTSlib was not rebuilt from source in this implementation.
 - `make.ps1` enters the local toolchain environment without changing global PATH; Make delegates compilation to Ninja.
@@ -15,17 +42,17 @@ Status: milestones 1–3 and the bounded genotype QC/PCA path of milestone 4 are
 - Milestone 4 now pins official native PLINK2 and expands a genotype config into 15 resumable tasks: normalization, masking, QC, explicit relatedness selection, PGEN/BCF+CSI, separate diversity/PCA marker sets, LD pruning, exact PCA and independent streamed eigenpair validation. Synthetic results: 61 retained samples, 238 diversity sites, 234 PCA markers. See `docs/GENOTYPES.md` for boundaries and numerical checks.
 - `make.sh` and `popgen` provide tested Git Bash entry points alongside unchanged PowerShell usage. Linux remains separate.
 - Milestone 5 now has ENA metadata discovery, explicit sample-to-individual/reference manifests, default plan-only acquisition, byte/disk budgets, streaming MD5/size verification and validated-file reuse. No biological downloads occurred. The raw-read path now pins community Windows fastp 1.3.3 and official Bowtie2 2.5.5, with read-group-aware alignment, per-library duplicate marking, joint calling and the existing genotype mask/statistics boundary. The 40-task fixture covers five runs, three samples, four libraries, expected SNP calls/depths, Unicode paths and recovery. See `docs/READS.md`. BWA remains unsupported; real-cohort validation is still required.
-- No real sequencing data has been downloaded. `README.md`, `docs/STATISTICS.md` and `docs/WORKFLOWS.md` document the current executable's behavior.
+- Milestone 6 now includes 200 public individuals / 22,817 chr21 SNPs with independent count and PCA checks, and a 100,000-person / 10,000-SNP streaming benchmark. No real FASTQ data was downloaded. See `docs/VALIDATION.md` for measured limits and `docs/NUMERICAL_BACKENDS.md` for ALGLIB/PLINK2 selection.
 
-## Location and scope
+## Location and scope (updated for Linux)
 
-- Confirmed project root: `C:\PopGenA\PopGenA`.
-- Initial development and execution target: native Windows. Linux will be developed separately later; WSL is not the initial runtime.
-- Reference directories: `../population_genomics`, `../population_genomics_cpp`, and `../AntRepCLA`.
+- Current project root: `/home/dzk55/bioinformatics/PopGenA` (Linux/WSL2). Historical root: `C:\PopGenA\PopGenA`.
+- Historical: initial development targeted native Windows; superseded by the Linux migration above.
+- Historical reference directories (now deleted): `../population_genomics`, `../population_genomics_cpp`, and `../AntRepCLA`.
 - The user's confirmed location supersedes the Linux implementation path in the old handoff.
-- Build a C++20 application with Make as the user interface and Ninja as the build executor. No Python, Julia, CMake, or Nextflow dependency. Optional R figures.
+- Build a C++20 application with GNU Make (which also builds all vendored dependencies); Ninja executes generated analysis graphs. No Python, Julia, CMake, or Nextflow dependency. Optional R figures.
 - Support both public cohort genotypes and a raw-read path feeding the same genotype analysis boundary.
-- Carry forward the handoff's 16 GB RAM / 8 cores / 500 GB free SSD profile, but measure actual available Windows resources before execution.
+- Planning profile was 16 GB RAM / 8 threads / 500 GB SSD. Under WSL2 Linux currently sees 8 threads and 7.6 GiB RAM (WSL2 default); measure actual resources before execution.
 
 ## Inspection findings
 
@@ -150,5 +177,5 @@ Complete the Windows toolchain and HTSlib feasibility gate first, then milestone
 - Serena used project activation, source pattern searches and C++ symbol overviews. Activation created workspace-level `.serena` configuration.
 - Context7 was queried for Ninja; its partial results were supplemented with the [official Ninja manual](https://ninja-build.org/manual.html), especially pools and dependency semantics.
 - Before implementation, verify current documentation for each tool's exact invocation through Context7, with official documentation fallback.
-- Still to select/validate: real reference release/checksums and sample mapping, real-cohort QC thresholds, optional clustering, population differentiation estimator, and measured scaling. Compiler/core tools/PLINK2 are already pinned and validated on synthetic inputs.
-- The original planning task performed no compilation or installation. Subsequent authorized implementation installed native project-local tools and ran builds/tests as described above; biological data downloads remain unperformed.
+- Still to select/validate: whole-genome reference/sample mapping and real-cohort QC thresholds, optional clustering, population differentiation estimator, and measured scaling. Compiler/core tools/PLINK2 are already pinned and validated on synthetic inputs.
+- The original planning task performed no compilation or installation. Subsequent authorized implementation installed native project-local tools and ran builds/tests as described above; a bounded public genotype subset was subsequently downloaded and validated; actual FASTQ downloads remain unperformed.

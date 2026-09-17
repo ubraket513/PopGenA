@@ -4,13 +4,11 @@
 `config/genotype-demo.json` into the existing resumable native workflow engine.
 Planning executes no tools or downloads.
 
-```powershell
-./make.ps1 genotype-plan
-./make.ps1 genotype
-./build/popgen.exe run --config path/to/cohort.json
+```bash
+make genotype-plan
+make genotype
+build/popgen run --config path/to/cohort.json
 ```
-
-Git Bash can use `./make.sh genotype` or `./popgen run --config ...`.
 JSON paths are relative to the configuration file. Reference FASTA and its
 adjacent `.fai` must already exist; both are tracked inputs. `assembly` is an
 explicit provenance label, not proof of compatibility. Reference alleles are
@@ -47,8 +45,9 @@ runtime dependencies, inputs and outputs use the existing provenance system.
    order. Population labels remain metadata and are never inferred clusters.
 6. **Publish retained genotypes** as PGEN/PVAR/PSAM and BCF+CSI; compute diversity
    summaries using all retained sites. PLINK exports VCF.gz with `id-paste=iid`,
-   then bcftools converts/indexes it. Direct BCF export from the pinned Windows
-   PLINK build appended CR to the last sample ID in testing and is not used.
+   then bcftools converts/indexes it. Direct BCF export from the earlier Windows
+   PLINK build appended CR to the last sample ID in testing; the validated VCF
+   route is kept.
    These are hardcall/allele products, not archival copies of FORMAT DP/GQ.
 7. **Select PCA markers** using separate `pca_maf` and `--indep-pairwise` settings
    (window in variants, step, unphased r-squared). PLINK's minimum 50 samples
@@ -62,8 +61,10 @@ runtime dependencies, inputs and outputs use the existing provenance system.
    PLINK's bounded exact solver itself uses a relationship matrix.
 
 All commands use the heavy pool. `analysis.threads` controls PLINK workers;
-`analysis.memory_mb` caps job committed memory, with 512 MiB reserved outside
-PLINK's requested workspace. The workflow budget must accommodate the largest
+`analysis.memory_mb` is the task's memory reservation; PLINK receives
+`--memory` of that value minus a 512 MiB reserve for the rest of the process. The minimum task budget is 1152 MiB: the pinned
+PLINK2 requires at least 640 MiB workspace plus that 512 MiB reserve.
+The workflow budget must accommodate the largest
 task, including statistics worker reservations. The default is 2 GiB; a cap is
 not a promise that every cohort under 5,000 samples fits. KING computation still
 has quadratic pair work even though only qualifying pairs are written. Large
@@ -97,13 +98,15 @@ pedigrees. Tests include both selection policies, eigenvector sign flips,
 incorrect eigenvalues, damage/resume, CSI access, Unicode and spaced paths.
 
 This implements the bounded genotype path of milestone 4. Optional clustering,
-FST, callable-site pi/dXY, real-cohort validation and large-scale approximate PCA
+FST, callable-site pi/dXY, genome-wide real-cohort validation and large-scale approximate PCA
 remain unimplemented. No raw-read calling or biological download occurs here.
 
-Commands were checked through Context7, official documentation and pinned
-native binaries: [bcftools](https://samtools.github.io/bcftools/bcftools.html),
+Commands were checked through Context7, official documentation and the pinned
+tool builds: [bcftools](https://samtools.github.io/bcftools/bcftools.html),
 [PLINK filters](https://www.cog-genomics.org/plink/2.0/filter),
 [KING](https://www.cog-genomics.org/plink/2.0/distance),
 [LD](https://www.cog-genomics.org/plink/2.0/ld),
 [PCA](https://www.cog-genomics.org/plink/2.0/strat).
-See `NATIVE_TOOLS.md` for the exact build pins.
+See `third_party/NOTICE.md` and `third_party/src/SHA256SUMS` for the exact source pins.
+
+A 200-person public chr21 subset has passed this workflow, independent sample counts and PCA residual checks. See VALIDATION.md. The minimum task memory budget is enforced at planning time, including the pinned PLINK workspace minimum.
