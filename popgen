@@ -1,6 +1,0 @@
-#!/usr/bin/env bash
-# Run build/popgen from anywhere, preserving the caller's working directory.
-set -euo pipefail
-executable=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)/build/popgen
-[[ -x $executable ]] || { printf 'Executable not found: %s (run make first)\n' "$executable" >&2; exit 127; }
-exec "$executable" "$@"

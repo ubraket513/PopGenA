@@ -9,44 +9,44 @@
   },
   "schema_version": 1,
   "reference_sha256": "fec402df6c61f25f0231d38b8626f3644c04eb367475b69aebf40a0777afcc67",
-  "samples": "../tests/fixtures/reads/samples.tsv",
+  "samples": "../tests/data/fixtures/reads/samples.tsv",
   "work_dir": "../work/reads-demo",
   "workflow_type": "reads",
-  "reference": "../tests/fixtures/reads/reference.fa",
+  "reference": "../tests/data/fixtures/reads/reference.fa",
   "runs": [
     {
       "library": "A_lib1",
       "id": "A_lane1",
-      "read2": "../tests/fixtures/reads/A_lane1_2.fastq",
-      "read1": "../tests/fixtures/reads/A_lane1_1.fastq",
+      "read2": "../tests/data/fixtures/reads/A_lane1_2.fastq",
+      "read1": "../tests/data/fixtures/reads/A_lane1_1.fastq",
       "sample": "A"
     },
     {
       "library": "A_lib1",
       "id": "A_lane2",
-      "read2": "../tests/fixtures/reads/A_lane2_2.fastq",
-      "read1": "../tests/fixtures/reads/A_lane2_1.fastq",
+      "read2": "../tests/data/fixtures/reads/A_lane2_2.fastq",
+      "read1": "../tests/data/fixtures/reads/A_lane2_1.fastq",
       "sample": "A"
     },
     {
       "library": "A_lib2",
       "id": "A_library2",
-      "read2": "../tests/fixtures/reads/A_library2_2.fastq",
-      "read1": "../tests/fixtures/reads/A_library2_1.fastq",
+      "read2": "../tests/data/fixtures/reads/A_library2_2.fastq",
+      "read1": "../tests/data/fixtures/reads/A_library2_1.fastq",
       "sample": "A"
     },
     {
       "library": "B_lib1",
       "id": "B_lane1",
-      "read2": "../tests/fixtures/reads/B_lane1_2.fastq",
-      "read1": "../tests/fixtures/reads/B_lane1_1.fastq",
+      "read2": "../tests/data/fixtures/reads/B_lane1_2.fastq",
+      "read1": "../tests/data/fixtures/reads/B_lane1_1.fastq",
       "sample": "B"
     },
     {
       "library": "C_lib1",
       "id": "C_lane1",
-      "read2": "../tests/fixtures/reads/C_lane1_2.fastq",
-      "read1": "../tests/fixtures/reads/C_lane1_1.fastq",
+      "read2": "../tests/data/fixtures/reads/C_lane1_2.fastq",
+      "read1": "../tests/data/fixtures/reads/C_lane1_1.fastq",
       "sample": "C"
     }
   ],

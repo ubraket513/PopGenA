@@ -1,0 +1,192 @@
+{
+  "measured": "2026-09-17",
+  "platform": "linux-x86_64 (WSL2), tools built from third_party/src",
+  "machine": {
+    "os": "Ubuntu 26.04.1 LTS",
+    "kernel": "6.18.33.2-microsoft-standard-WSL2",
+    "environment": "WSL2 on the Windows 11 machine recorded in machine.json",
+    "memory_total_kib": 7984768,
+    "memory_note": "WSL2 default VM memory limit (about half of the 16 GiB host); raise with memory= in %UserProfile%/.wslconfig",
+    "cpu": {
+      "name": "11th Gen Intel(R) Core(TM) i7-1165G7 @ 2.80GHz",
+      "physical_cores": 4,
+      "logical_processors": 8
+    },
+    "compiler": "gcc (Ubuntu 15.2.0-16ubuntu1) 15.2.0",
+    "root_available_bytes_at_measurement": 963295260672
+  },
+  "prepared": {
+    "prepared_utc": "2026-09-17T13:37:40Z",
+    "sample": "HG002",
+    "region": "chr20:10000000-12000000",
+    "read_pairs": 280181,
+    "downloaded_bam_range_bytes": 80540550,
+    "bam_index_md5_verified": "a3c2b449df6509ca83fbd3fea22b9aee",
+    "read1_sha256": "eb23ceb751fab9b56820ca287573d221f81187442963342ec0a50ecb61039193",
+    "read2_sha256": "5eca2b9850b9acfcaa204b247d915c39ae20fe4022f445c053dbd6c8ec3637a6",
+    "reference_fasta_sha256": "61eba5b05ef7d9ae5310e756c1143fa48072de3856d36871bb14e57aa2435ff3",
+    "truth_vcf_sha256": "adb4d4a50048aa13353a06b84fcfcbca09a5d17525efaa4cea44f8822e81175c",
+    "truth_bed_sha256": "fba9a57c36ec88e5d14ea3e259c8866c7935f4998d3ec0fa2d6c3962da5b5575",
+    "truth_checksum_note": "GIAB md5.in for v4.2.1 lists only supplementary files; SHA256 of the main benchmark VCF/BED is recorded locally but not verified against a publisher checksum",
+    "selection": "Primary alignments (not secondary/supplementary) overlapping the region in the GIAB novoalign BAM; pairs with both mates overlapping kept; singletons dropped. Selection depends on the original alignment, and reads are re-aligned only to chr20, so off-target and paralog effects are not represented.",
+    "scope": "Bounded single-sample interval accuracy check of the reads workflow; not genome-wide calling accuracy"
+  },
+  "config": {
+    "qc": {
+      "min_dp": 10,
+      "min_gq": 20
+    },
+    "aligner": "bowtie2-align-s --very-sensitive --end-to-end",
+    "caller": "bcftools mpileup | call -m",
+    "threads": 4
+  },
+  "alignment": [
+    {
+      "duplicates": 14704,
+      "library": "giab_2x250",
+      "mapped": 539064,
+      "records": 541616,
+      "sample": "HG002",
+      "usable_primary_records": 524360
+    }
+  ],
+  "mask": {
+    "records": 3380,
+    "kept": 2779,
+    "genotypes": {
+      "kept": 2725,
+      "masked": 54,
+      "missing": 2,
+      "quality": 52,
+      "unsupported": 0
+    }
+  },
+  "evaluation": {
+    "calls": "/home/dzk55/bioinformatics/PopGenA/work/giab-hg002/analysis/results/mask/086fcae25e2e1fccfbc38e45078a09b2/masked.bcf",
+    "truth": "work/giab-hg002/truth/HG002_GRCh38_1_22_v4.2.1_benchmark.vcf.gz",
+    "confident_regions": "work/giab-hg002/truth/HG002_GRCh38_1_22_v4.2.1_benchmark_noinconsistent.bed",
+    "region": "chr20:10000000-12000000",
+    "margin_bases": 10000,
+    "evaluated_interval": "chr20:10010000-11990000",
+    "confident_bases_evaluated": 1946451,
+    "snps": {
+      "true_positive": 2541,
+      "false_positive": 8,
+      "false_negative": 7,
+      "genotype_match": 2541,
+      "excluded_multiallelic_positions": 2,
+      "precision": 0.996862,
+      "recall": 0.997253,
+      "f1": 0.997057,
+      "genotype_concordance": 1
+    },
+    "method": "Biallelic SNPs in confident regions; match on CHROM/POS/REF/ALT; unphased genotype comparison; not haplotype-aware (indels and complex variants not evaluated)"
+  },
+  "evaluator_self_check": "truth vs truth in the same regions: precision = recall = 1, 0 FP/FN",
+  "workflow": {
+    "tasks": 14,
+    "wall_seconds": 308,
+    "retained_analysis_bytes": 611885038,
+    "per_task": [
+      {
+        "task": "bams",
+        "elapsed_ms": 605,
+        "cpu_user_ms": 568,
+        "cpu_system_ms": 32,
+        "max_rss_bytes": 8998912
+      },
+      {
+        "task": "call",
+        "elapsed_ms": 30081,
+        "cpu_user_ms": 30272,
+        "cpu_system_ms": 458,
+        "max_rss_bytes": 104673280
+      },
+      {
+        "task": "index",
+        "elapsed_ms": 79784,
+        "cpu_user_ms": 256799,
+        "cpu_system_ms": 3889,
+        "max_rss_bytes": 269131776
+      },
+      {
+        "task": "lib1-markdup",
+        "elapsed_ms": 10705,
+        "cpu_user_ms": 19602,
+        "cpu_system_ms": 404,
+        "max_rss_bytes": 5021696
+      },
+      {
+        "task": "lib1-merge",
+        "elapsed_ms": 8562,
+        "cpu_user_ms": 8433,
+        "cpu_system_ms": 87,
+        "max_rss_bytes": 8732672
+      },
+      {
+        "task": "mask",
+        "elapsed_ms": 41,
+        "cpu_user_ms": 22,
+        "cpu_system_ms": 4,
+        "max_rss_bytes": 9371648
+      },
+      {
+        "task": "normalize",
+        "elapsed_ms": 40,
+        "cpu_user_ms": 12,
+        "cpu_system_ms": 4,
+        "max_rss_bytes": 5566464
+      },
+      {
+        "task": "r1-align",
+        "elapsed_ms": 136132,
+        "cpu_user_ms": 522538,
+        "cpu_system_ms": 6294,
+        "max_rss_bytes": 294641664
+      },
+      {
+        "task": "r1-check",
+        "elapsed_ms": 11667,
+        "cpu_user_ms": 11554,
+        "cpu_system_ms": 92,
+        "max_rss_bytes": 7770112
+      },
+      {
+        "task": "r1-fix",
+        "elapsed_ms": 11688,
+        "cpu_user_ms": 11230,
+        "cpu_system_ms": 580,
+        "max_rss_bytes": 294146048
+      },
+      {
+        "task": "r1-trim",
+        "elapsed_ms": 4355,
+        "cpu_user_ms": 17792,
+        "cpu_system_ms": 544,
+        "max_rss_bytes": 154210304
+      },
+      {
+        "task": "r1-trim-check",
+        "elapsed_ms": 11669,
+        "cpu_user_ms": 11567,
+        "cpu_system_ms": 92,
+        "max_rss_bytes": 9232384
+      },
+      {
+        "task": "reference",
+        "elapsed_ms": 523,
+        "cpu_user_ms": 363,
+        "cpu_system_ms": 151,
+        "max_rss_bytes": 75681792
+      },
+      {
+        "task": "stats",
+        "elapsed_ms": 41,
+        "cpu_user_ms": 11,
+        "cpu_system_ms": 11,
+        "max_rss_bytes": 11874304
+      }
+    ]
+  },
+  "scope": "One sample, one 2 Mb interval, SNPs only in GIAB v4.2.1 confident regions; reads re-extracted from an existing alignment and re-aligned to chr20 only. Not genome-wide or indel accuracy."
+}

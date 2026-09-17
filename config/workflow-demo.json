@@ -3,8 +3,8 @@
   "work_dir": "../work/workflow-demo",
   "resources": {"threads": 8, "memory_mb": 10240, "light_jobs": 1},
   "inputs": {
-    "cohort": "../tests/fixtures/cohort.vcf",
-    "samples": "../tests/fixtures/samples.tsv"
+    "cohort": "../tests/data/fixtures/cohort.vcf",
+    "samples": "../tests/data/fixtures/samples.tsv"
   },
   "tools": {"bcftools": {"path": "bcftools", "version_args": ["--version"]}},
   "tasks": [
