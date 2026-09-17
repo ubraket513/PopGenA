@@ -1,0 +1,69 @@
+name: CI
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Lint (clang-format, shellcheck)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pinned lint tools
+        run: pipx install clang-format==21.1.8 && pipx install shellcheck-py==0.11.0.1
+      - name: C++ formatting
+        run: make format-check
+      - name: Shell scripts
+        run: make lint
+
+  build-and-test:
+    name: Build and test
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - name: System prerequisites
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends build-essential zlib1g-dev libbz2-dev liblzma-dev libssl-dev
+      - name: Cache vendored dependency builds
+        uses: actions/cache@v4
+        with:
+          path: .deps/linux
+          key: deps-${{ runner.os }}-${{ hashFiles('third_party/src/SHA256SUMS', 'mk/*.mk') }}
+      - name: Build (offline, vendored sources)
+        run: make
+      - name: Dependency and tool report
+        run: make doctor
+      - name: Unit tests
+        run: make test
+      - name: Integration tests
+        run: make verify
+      - name: Streaming benchmark (1000 x 1000)
+        run: make benchmark
+      - name: Offline demos resume without recomputation
+        run: |
+          for target in workflow genotype reads; do
+            make "$target" >/dev/null
+            make "$target" >/dev/null
+          done
+          for pair in workflow-demo:2 genotype-demo:15 reads-demo:40; do
+            .deps/linux/prefix/bin/jq -e --argjson n "${pair##*:}" \
+              '.reused_tasks == $n and .scheduled_tasks == 0' "work/${pair%%:*}/last-run.json"
+          done
+      - name: Upload test and demo records
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-records
+          path: |
+            work/*-demo/plan.json
+            work/*-demo/state
+            work/*-demo/last-run.json
+            work/benchmark-linux-*/benchmark.json
+            build/test-work/**/stderr.txt
+          if-no-files-found: ignore

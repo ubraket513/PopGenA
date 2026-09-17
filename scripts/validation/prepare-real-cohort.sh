@@ -13,7 +13,7 @@ export PATH="$ROOT/.deps/linux/prefix/bin:$PATH"
 source "$ROOT/scripts/lib/fetch.sh"
 
 LOCK=$ROOT/scripts/sources/real-cohort.lock.json
-OUT=$ROOT/work/real-validation-linux DOWNLOAD=0 REUSE=
+OUT=$ROOT/work/real-validation-linux DOWNLOAD=0 REUSE=''
 while (($#)); do
     case $1 in
     --out) OUT=$2; shift 2 ;;

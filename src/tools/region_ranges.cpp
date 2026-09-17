@@ -10,7 +10,8 @@ int main() {
     try {
         auto a = pg::arguments();
         if (a.size() != 3 && a.size() != 4)
-            throw std::runtime_error("Usage: region-ranges index.tbi region | region-ranges index.bai region header.bam");
+            throw std::runtime_error(
+                "Usage: region-ranges index.tbi region | region-ranges index.bai region header.bam");
         std::unique_ptr<hts_itr_t, decltype(&hts_itr_destroy)> it(nullptr, &hts_itr_destroy);
         std::unique_ptr<tbx_t, decltype(&tbx_destroy)> tabix(nullptr, &tbx_destroy);
         std::unique_ptr<hts_idx_t, decltype(&hts_idx_destroy)> bam_index(nullptr, &hts_idx_destroy);

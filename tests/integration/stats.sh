@@ -78,4 +78,4 @@ check 'replacement accepted unowned additional files' test "$(cat "$TEST_ROOT/pl
 (cd "$TEST_ROOT" && stats "$VCF" "$TEST_ROOT/other-cwd" --samples "$META")
 check 'result depends on caller directory' test "$(digest "$TEST_ROOT/other-cwd/samples.tsv")" = "$BEFORE"
 check 'failed stage was not cleaned up' test -z "$(find "$TEST_ROOT" -maxdepth 1 -name '.popgen-stage-*')"
-echo "Integration checks passed; artifacts: $TEST_ROOT"
+echo "Statistics integration checks passed; artifacts: $TEST_ROOT"

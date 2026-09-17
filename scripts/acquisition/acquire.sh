@@ -7,7 +7,7 @@ ROOT=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd -P)
 export PATH="$ROOT/.deps/linux/prefix/bin:$PATH" # vendored tools (jq, bcftools, ...) first
 
 usage() { echo 'Usage: acquire.sh --manifest manifest.json --out DIR --max-bytes N [--download]' >&2; exit 2; }
-MANIFEST= OUT= MAX_BYTES= DOWNLOAD=0
+MANIFEST='' OUT='' MAX_BYTES='' DOWNLOAD=0
 while (( $# )); do
     case $1 in
         --manifest) MANIFEST=$2; shift 2 ;;
@@ -115,7 +115,7 @@ for (( i = 0; i < COUNT; i++ )); do
     [[ ! -e $final ]] || die "Output appeared after planning: $final"
     PART=$(mktemp -- "$final.XXXXXXXX.part")
     # No redirects are followed; the transfer is capped at the manifest size.
-    code=$("$CURL" --silent --show-error --proto =https --max-redirs 0 --connect-timeout 120 --max-time 86400 \
+    code=$("$CURL" --silent --show-error --proto '=https' --max-redirs 0 --connect-timeout 120 --max-time 86400 \
         --max-filesize "$bytes" --write-out '%{http_code}' --output "$PART" -- "$url") || code=${code:-000}
     [[ $code == 200 ]] || die "Download of $name requires HTTP 200 (got $code); redirects are not followed"
     [[ $(stat -c %s -- "$PART") == "$bytes" && $(md5sum -- "$PART" | cut -d' ' -f1) == "$md5" ]] \

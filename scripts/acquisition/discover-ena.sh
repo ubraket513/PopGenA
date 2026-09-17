@@ -14,7 +14,7 @@ Without --mapping only metadata.tsv and catalog.json are written.
 EOF
     exit 2
 }
-STUDY=PRJEB31736 OUT= REPORT= MAPPING= ASSEMBLY= REFERENCE_SHA256=
+STUDY=PRJEB31736 OUT='' REPORT='' MAPPING='' ASSEMBLY='' REFERENCE_SHA256=''
 RUNS=()
 while (( $# )); do
     case $1 in
@@ -39,7 +39,7 @@ URL="https://www.ebi.ac.uk/ena/portal/api/filereport?accession=$STUDY&result=rea
 if [[ -n $REPORT ]]; then
     TEXT=$(cat -- "$REPORT"; printf x); SOURCE_KIND=local_report
 else
-    TEXT=$(curl --fail --silent --show-error --proto =https --max-time 120 -- "$URL"; printf x); SOURCE_KIND=ena_api
+    TEXT=$(curl --fail --silent --show-error --proto '=https' --max-time 120 -- "$URL"; printf x); SOURCE_KIND=ena_api
 fi
 TEXT=${TEXT%x}
 mkdir -p -- "$OUT"

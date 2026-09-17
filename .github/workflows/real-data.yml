@@ -1,0 +1,56 @@
+name: Real-data validation
+# Manual only: downloads public data (bounded byte ranges) and runs the validation workflows.
+on:
+  workflow_dispatch:
+    inputs:
+      giab:
+        description: GIAB HG002 chr20 interval read-calling accuracy (~0.3 GB download)
+        type: boolean
+        default: true
+      chr21:
+        description: 1000 Genomes chr21 200-person QC/PCA and independent counts (~0.1 GB)
+        type: boolean
+        default: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v4
+      - name: System prerequisites
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends build-essential zlib1g-dev libbz2-dev liblzma-dev libssl-dev
+      - uses: actions/cache@v4
+        with:
+          path: .deps/linux
+          key: deps-${{ runner.os }}-${{ hashFiles('third_party/src/SHA256SUMS', 'mk/*.mk') }}
+      - name: Build
+        run: make
+      - name: GIAB HG002 accuracy
+        if: inputs.giab
+        run: |
+          scripts/validation/prepare-giab-reads.sh --download
+          build/popgen run --config work/giab-hg002/config.json
+          masked=$(.deps/linux/prefix/bin/jq -r .result_dir work/giab-hg002/analysis/state/mask.json)/masked.bcf
+          truth=work/giab-hg002/truth
+          scripts/validation/evaluate-calls.sh --calls "$masked" \
+            --truth "$truth/HG002_GRCh38_1_22_v4.2.1_benchmark.vcf.gz" \
+            --bed "$truth/HG002_GRCh38_1_22_v4.2.1_benchmark_noinconsistent.bed" \
+            --region chr20:10000000-12000000 --margin 10000 --sample HG002 --out work/giab-hg002/evaluation.json
+          .deps/linux/prefix/bin/jq -e '.snps.precision >= 0.99 and .snps.recall >= 0.99' work/giab-hg002/evaluation.json
+      - name: 1000 Genomes chr21 subset
+        if: inputs.chr21
+        run: |
+          scripts/validation/prepare-real-cohort.sh --download
+          build/popgen run --config work/real-validation-linux/config.json
+          scripts/validation/report-real-validation.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: real-data-reports
+          path: |
+            work/giab-hg002/prepared.json
+            work/giab-hg002/evaluation.json
+            work/real-validation-linux/prepared.json
+            work/real-validation-linux/report.json
+          if-no-files-found: ignore

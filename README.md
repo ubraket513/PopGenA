@@ -40,11 +40,11 @@ CMake, Julia or administrator-installed bioinformatics tools are needed.
 `.deps/linux` (rebuilt by the next `make`). `work/` and `out/` hold data and
 results and are never cleaned by the build.
 
-Run the executable directly (or through the `./popgen` launcher):
+Run the executable directly:
 
 ```bash
-build/popgen stats --input tests/fixtures/cohort.vcf \
-  --samples tests/fixtures/samples.tsv --out out/my-analysis \
+build/popgen stats --input tests/data/fixtures/cohort.vcf \
+  --samples tests/data/fixtures/samples.tsv --out out/my-analysis \
   --min-dp 10 --min-gq 20 --threads 2
 ```
 
@@ -53,6 +53,49 @@ build/popgen stats --input tests/fixtures/cohort.vcf \
 Results are written to a temporary sibling directory, validated and then renamed into place. Existing outputs are refused unless `--replace` is supplied. Replacement is restricted to a recognized, completed PopGenA result directory containing only the expected files. Old results remain intact if input parsing or analysis fails. As with a two-rename directory replacement, a hard process/power failure during publication may leave a `.popgen-backup-*` directory requiring recovery; do not delete it without inspecting it.
 
 Progress/errors go to stderr, and the JSON result goes to stdout. Redistribution of built binaries requires preserving the dependencies' license obligations; see `third_party/NOTICE.md`.
+
+## Repository layout
+
+```text
+src/
+  app/          CLI entry point (main.cpp) and `doctor`
+  core/         platform primitives (I/O, hashing, locks) and process execution
+  stats/        streaming VCF/BCF statistics
+  workflow/     planned, resumable Ninja-executed workflows
+  genotype/     genotype QC/relatedness/PCA workflow and genotype masking
+  reads/        paired-FASTQ-to-genotype workflow
+  tools/        developer utilities (benchmark-fixture, region-ranges)
+tests/
+  unit/         doctest unit tests (build/tests)
+  helpers/      process-helper used by the process tests
+  integration/  bash end-to-end suites run by `make verify`
+  generators/   regenerate tests/data/fixtures deterministically
+  data/         fixtures and independent golden outputs
+scripts/
+  acquisition/  ENA discovery and bounded FASTQ acquisition
+  validation/   real-data preparation, evaluation and reports
+  benchmark/    synthetic scale benchmark
+  sources/      pinned source lock files for the validation datasets
+  lib/          shared verified-download helpers
+config/         example workflow configurations
+mk/             dependency build rules (deps.mk, plink2.mk)
+third_party/    vendored headers, source archives (src/), licenses and NOTICE.md
+docs/           scientific contracts, validation evidence, history
+```
+
+## Development
+
+```bash
+make check          # before every change: unit + integration tests
+make format         # clang-format (pinned 21.1.8 in CI; e.g. `uvx clang-format==21.1.8`)
+make format-check   # what CI enforces
+make lint           # shellcheck (pinned 0.11.0 in CI)
+```
+
+GitHub Actions (`.github/workflows/ci.yml`) runs lint, the offline build, unit and
+integration tests, the benchmark and demo resume checks on every push and pull
+request. `.github/workflows/real-data.yml` runs the public real-data validations
+on manual dispatch only, because it downloads data.
 
 ## Results and scientific contract
 
@@ -71,4 +114,4 @@ See [validation scope and measured resources](docs/VALIDATION.md) and
 assessment. A 100,000-person streaming statistics benchmark does not imply
 100,000-person PCA support.
 
-Build, statistics, workflows and the bounded genotype QC/PCA path are implemented; see [genotype configuration and scientific contract](docs/GENOTYPES.md) and [workflow execution and recovery](docs/WORKFLOWS.md). ENA discovery and size/checksum-verified acquisition are bash tools; see [acquisition](docs/ACQUISITION.md). Raw-read preprocessing, alignment and joint calling are implemented and tested on synthetic data; see [raw-read configuration](docs/READS.md). A bounded public 200-person genotype subset has passed QC/PCA and independent-count validation, and the Linux build reproduces the earlier Windows results exactly. Actual human FASTQ accuracy remains unvalidated; BWA is not installed. Remaining work is in [HANDOFF.md](HANDOFF.md) and [PLAN.md](PLAN.md).
+Build, statistics, workflows and the bounded genotype QC/PCA path are implemented; see [genotype configuration and scientific contract](docs/GENOTYPES.md) and [workflow execution and recovery](docs/WORKFLOWS.md). ENA discovery and size/checksum-verified acquisition are bash tools; see [acquisition](docs/ACQUISITION.md). Raw-read preprocessing, alignment and joint calling are implemented; see [raw-read configuration](docs/READS.md). Real-data checks: GIAB HG002 reads on a 2 Mb chr20 interval reach SNP precision 0.9969 / recall 0.9973 against the GIAB v4.2.1 benchmark; the full 1000 Genomes chr22 cohort (2,504 people, 929,834 SNPs) passes QC/KING/PCA with independent count validation; a 200-person chr21 subset reproduces the earlier Windows results exactly. Genome-wide and indel accuracy remain unvalidated; BWA is not installed. Remaining work is in [HANDOFF.md](HANDOFF.md) and [PLAN.md](docs/history/PLAN.md).

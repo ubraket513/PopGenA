@@ -8,7 +8,7 @@ ROOT=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd -P)
 export PATH="$ROOT/.deps/linux/prefix/bin:$PATH"
 source "$ROOT/scripts/lib/fetch.sh"
 
-LOCK=$ROOT/scripts/sources/1000g-chr22.lock.json OUT= DOWNLOAD=0
+LOCK=$ROOT/scripts/sources/1000g-chr22.lock.json OUT='' DOWNLOAD=0
 while (($#)); do
     case $1 in
     --lock) LOCK=$2; shift 2 ;;

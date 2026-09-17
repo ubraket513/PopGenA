@@ -6,7 +6,7 @@ set -euo pipefail
 
 ROOT=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd -P)
 export PATH="$ROOT/.deps/linux/prefix/bin:$PATH" # vendored tools (jq, bcftools, ...) first
-SAMPLES=1000 SITES=1000 OUT=
+SAMPLES=1000 SITES=1000 OUT=''
 while (( $# )); do
     case $1 in
         --samples) SAMPLES=$2; shift 2 ;;

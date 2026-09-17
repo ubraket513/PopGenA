@@ -1,3 +1,4 @@
+# shellcheck shell=bash
 # Shared helpers for the integration tests. Source from a test script:
 #   source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 set -euo pipefail

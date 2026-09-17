@@ -13,10 +13,11 @@ Windows program and migrated to Linux on 2026-09-17. The earlier nested layout
 the user's request; they no longer exist.
 
 State: one offline `make` builds every dependency from vendored sources and the
-application; `make check` passes (11 unit test cases, 6 integration suites); the
+application; `make check` passes (11 unit test cases in 3 files, 6 integration suites); the
 bounded real public-genotype validation and the 100k-person streaming benchmark
-were re-run on Linux and match the Windows evidence. **The product is not
-finished**: real human FASTQ calling accuracy, function-level profiling,
+were re-run on Linux and match the Windows evidence; a bounded GIAB HG002 read-calling
+accuracy check and a whole-chr22 2,504-person run passed (see Measured results). **The product is not
+finished**: genome-wide/indel real-read accuracy, function-level profiling,
 large-cohort approximate PCA, genome-wide validation and release packaging
 remain. Do not confuse the 100k-person statistics benchmark with 100k-person PCA.
 
@@ -25,7 +26,7 @@ Read next:
 1. `docs/VALIDATION.md` — measurements, Linux reproduction evidence, remaining gates.
 2. `docs/NUMERICAL_BACKENDS.md` — library reuse policy and ALGLIB assessment.
 3. `docs/WORKFLOWS.md`, `docs/GENOTYPES.md`, `docs/READS.md`, `docs/ACQUISITION.md`.
-4. `PLAN.md` — roadmap; its top section summarizes the migration, the rest is history.
+4. `docs/history/PLAN.md` — roadmap; its top section summarizes the migration, the rest is history.
 
 ## User constraints and decisions
 
@@ -44,8 +45,8 @@ Read next:
 - Use Serena MCP for code reading/editing (project `PopGenA`, languages cpp and
   bash; relative paths `src/...`). Use Context7 for library/CLI documentation.
 - Public human cohorts are the intended data. No whole-study or enormous WGS
-  downloads without an explicit reviewed byte/scratch plan. No real FASTQ has
-  been downloaded.
+  downloads without an explicit reviewed byte/scratch plan. Real reads so far are
+  bounded byte ranges of the GIAB HG002 BAM (80.5 MB); no whole FASTQ was downloaded.
 - Hardware: i7-1165G7, 4 cores / 8 threads. **Linux sees 7.6 GiB RAM** (WSL2
   default, host has ~16 GiB); raise `memory=` in `%UserProfile%\.wslconfig` before
   memory-heavy work. The workflow default `resources.memory_mb` (10240) exceeds it;
@@ -82,7 +83,7 @@ Archives and `SHA256SUMS` are in `third_party/src` (~69 MB); rules in `mk/deps.m
 use one verification stamp per archive. Output goes to ignored `.deps/linux`
 (`prefix/bin` holds the tools; `popgen` resolves bare tool names there first,
 then PATH). Licenses: `third_party/NOTICE.md`. Header-only CLI11/json/doctest stay
-in `third_party/` (`tools/headers.lock.json`).
+in `third_party/` (`third_party/headers.lock.json`).
 
 Ignored local state: `.deps` (Linux build + `alglib-audit`), `.cache` (ALGLIB and
 BWA source archives), `build`, `work`, `out`. `work/` holds validation evidence —
@@ -94,10 +95,10 @@ do not delete it. Windows-era files removed in the migration are archived in
 
 ### Foundation, statistics and workflow engine
 
-- `src/stats.cpp`: streamed autosomal biallelic diploid SNP counts, sample/site/
+- `src/stats/stats.cpp`: streamed autosomal biallelic diploid SNP counts, sample/site/
   population TSVs, explicit missing/quality semantics and SHA256 provenance.
   Variant-only summaries are not callable-base nucleotide diversity or dXY.
-- `src/process.cpp`, `src/workflow.hpp`: `run_pipeline` runs 1–16 commands in one
+- `src/core/process.{hpp,cpp}`: `run_pipeline` runs 1–16 commands in one
   process group via `fork`/`execve` (no shell, CLOEXEC descriptors, exec errors
   reported through a status pipe). Failure/timeout/cancel → SIGTERM to the group,
   SIGKILL after 5 s; leftover descendants are killed before publication.
@@ -107,9 +108,10 @@ do not delete it. Windows-era files removed in the migration are archived in
   Metadata writes are temp + `fsync` + rename. Records: per-stage exit codes,
   elapsed, user/system CPU, `max_rss_bytes` (largest single process via `wait4`,
   not a pipeline sum).
-- `src/platform.cpp`: OpenSSL EVP SHA256, `getrandom` IDs, `/proc/self/cmdline`
-  arguments, `rename_no_replace` (`renameat2 RENAME_NOREPLACE`), `doctor`.
-- `src/workflow.cpp`: `plan` writes a reviewable graph without running tasks;
+- `src/core/platform.{hpp,cpp}`: OpenSSL EVP SHA256, `getrandom` IDs, `/proc/self/cmdline`
+  arguments, `UniqueFd`, `flock` locks, `atomic_text`, `file_identity`,
+  `rename_no_replace` (`renameat2 RENAME_NOREPLACE`). `doctor` is in `src/app`.
+- `src/workflow/workflow.cpp`: `plan` writes a reviewable graph without running tasks;
   `run` validates prior completions and executes/resumes through Ninja.
   Immutable result generations; `state/<task>.json` → current `result_dir`.
   Symlinks inside work/result trees are refused. Source/tool/config changes
@@ -117,7 +119,7 @@ do not delete it. Windows-era files removed in the migration are archived in
 
 ### Genotype QC / PCA (15 tasks)
 
-`src/genotype.cpp`, `src/genotype_mask.cpp`, `config/genotype-demo.json`:
+`src/genotype/genotype.cpp`, `src/genotype/mask.cpp`, `config/genotype-demo.json`:
 normalize → mask → PLINK import/missingness → sample QC → site QC → KING →
 explicit relatedness selection → retained PGEN + VCF.gz → BCF/CSI → LD pruning →
 exact PCA → independent streamed covariance/eigenpair validation, plus statistics.
@@ -132,7 +134,7 @@ exact PCA → independent streamed covariance/eigenpair validation, plus statist
 
 ### Raw reads (40-task offline fixture)
 
-`src/reads.cpp`, `config/reads-demo.json`: reference SHA256/index → strict paired
+`src/reads/reads.cpp`, `config/reads-demo.json`: reference SHA256/index → strict paired
 FASTQ validation → fastp → output QC → Bowtie2 read-group-aware alignment/name
 sort → fixmate/coordinate sort → merge per sample/library → mark duplicates →
 BAM/CSI audit → joint bcftools calling → normalization/masking → statistics.
@@ -146,20 +148,35 @@ BAM/CSI audit → joint bcftools calling → normalization/masking → statistic
   command field, so reports keep `fastp.raw.json` and the adapter repairs only that
   value (Linux runs so far needed no repair).
 
-### Tools and tests (bash)
+### Repository layout, scripts and tests
 
-- `tools/discover-ena.sh`, `tools/acquire.sh`: ENA metadata discovery and
-  plan-first bounded paired FASTQ acquisition (HTTPS, no redirects, size/MD5,
-  atomic publish). `POPGEN_ACQUIRE_CURL` is a test hook for an offline transport.
-- `tools/prepare-real-cohort.sh` (plan by default; `--download`; `--reuse DIR`
-  seeds the range cache with re-verification), `tools/report-real-validation.sh`,
-  `tools/benchmark.sh`.
-- `tests/lib.sh` + `integration.sh`, `workflow.sh`, `mask.sh`, `genotype.sh`,
-  `acquisition.sh`, `reads.sh`; artifacts under `build/test-work/` (paths contain
-  space, `&` and Hangul on purpose). `tests/genotype-fixture.sh` and
-  `tests/reads-fixture.sh` regenerate fixtures byte-identically (reads
-  `expected.json` semantically).
-- `.github/workflows/linux.yml` exists but has **never run** (no remote).
+- Sources are modular: `src/app` (main, doctor), `src/core` (platform primitives,
+  process execution), `src/stats`, `src/workflow`, `src/genotype` (genotype, mask),
+  `src/reads`, `src/tools` (benchmark-fixture, region-ranges). Library code is archived
+  into `build/libpopgen.a`; binaries link against it.
+- `scripts/acquisition/{discover-ena,acquire}.sh`: ENA metadata discovery and plan-first
+  bounded paired FASTQ acquisition (HTTPS, no redirects, size/MD5, atomic publish).
+  `POPGEN_ACQUIRE_CURL` is a test hook for an offline transport.
+- `scripts/validation/`: `prepare-real-cohort.sh` (chr21 200-person subset; `--reuse DIR`
+  re-verifies an earlier range cache), `prepare-1000g-chromosome.sh` (whole chr22,
+  2,504 people), `prepare-giab-reads.sh` (HG002 interval reads + truth),
+  `evaluate-calls.sh` (SNP precision/recall in confident regions),
+  `report-real-validation.sh` (independent bcftools counts + PCA check). Pinned
+  sources: `scripts/sources/*.lock.json`. Shared verified-download helpers:
+  `scripts/lib/fetch.sh` (ranged, resumable, per-chunk SHA256; parallel 8 MiB ranges
+  for whole files because EBI throttles single connections).
+- `scripts/benchmark/benchmark.sh`: synthetic scale benchmark.
+- Tests: `tests/unit/*_test.cpp` (doctest, `make test`), `tests/helpers/process_helper.cpp`,
+  `tests/integration/{stats,workflow,mask,genotype,acquisition,reads}.sh` + `lib.sh`
+  (`make verify`; artifacts in `build/test-work/`, paths contain space/`&`/Hangul on
+  purpose), `tests/generators/*-fixture.sh` (regenerate `tests/data/fixtures`
+  byte-identically; reads `expected.json` semantically).
+- CI: `.github/workflows/ci.yml` (lint with pinned clang-format 21.1.8 and shellcheck
+  0.11.0, offline build, unit + integration tests, benchmark, demo resume) and
+  `real-data.yml` (manual dispatch: GIAB HG002 accuracy gate precision/recall ≥ 0.99, chr21
+  subset). **Neither has run yet** (no remote).
+- `make format`/`format-check`/`lint` need clang-format/shellcheck on PATH (not build
+  dependencies; locally `uvx clang-format==21.1.8`, `uvx --from shellcheck-py==0.11.0.1 shellcheck`).
 
 ## Measured results
 
@@ -204,7 +221,9 @@ From a clean state (`make deps-clean && make clean`), `make` finished offline in
 737 s (no downloads in the log) and a second `make` did nothing. `make check`: 11
 doctest cases / 97 assertions and all six integration suites passed (45 s),
 including a test that a background `popgen run` survives its launching shell.
-`make workflow|genotype|reads` each ran twice with full reuse (2/15/40).
+`make workflow|genotype|reads` each ran twice with full reuse (2/15/40). After the
+repository restructuring the new layout was rebuilt and `make check` passed again;
+`make format-check` (clang-format 21.1.8) and `make lint` (shellcheck 0.11.0) are clean.
 
 ## Profiling: still missing
 
@@ -212,6 +231,24 @@ Task-level wall/CPU/RSS is recorded. **Function-level CPU sampling/flamegraphs
 have NOT been run.** Real FASTQ alignment/calling CPU, RSS, peak scratch and
 accuracy have NOT been measured. Retained output sizes are not peak temporary disk.
 On Linux, `perf` is the natural next tool once a real bottleneck is observed.
+
+### Real-read accuracy — GIAB HG002 (Linux)
+
+280,181 read pairs from the GIAB HG002 2x250 BAM, chr20:10–12 Mb (index-selected
+80.5 MB byte ranges), called by the 14-task reads workflow in 308 s. Within 1.95 Mb of
+GIAB v4.2.1 confident regions: SNP TP 2,541 / FP 8 / FN 7, precision 0.99686, recall
+0.99725, F1 0.99706, genotype concordance 1.0. Evaluator self-check (truth vs truth) = 1.
+Limits: one interval, SNPs only, reads re-aligned to chr20 only. Artifacts:
+`work/giab-hg002/`; evidence `docs/validation/giab-hg002-chr20.json`.
+
+### Whole-chromosome scale — 1000 Genomes chr22, 2,504 people (Linux)
+
+Whole chr22 VCF verified by manifest MD5; 929,834 PASS biallelic SNPs × 2,504 people.
+15-task workflow 1,918 s (PLINK `--bcf` import 1,480 s dominates; machine shared with
+other workloads), largest RSS 1.08 GiB, 7.2 GB retained. 0 samples failed QC; 465 KING
+pairs reported (retain); 9,079 PCA markers; 10 eigenpairs validated (residual ≤2.25e-6);
+bcftools reproduced all 2,504 per-sample counts. Artifacts: `work/1000g-chr22/`;
+evidence `docs/validation/1000g-chr22-2504-linux.json`.
 
 ## ALGLIB and approximate PCA
 
@@ -226,19 +263,18 @@ until approximate mode is implemented and validated. See NUMERICAL_BACKENDS.md.
 
 ## Next work, in priority order
 
-1. **Commit the migration** when the user asks (nothing is committed yet).
-2. **Real human FASTQ validation and profiling.** One bounded public sample with
-   an independent truth set/confident regions and the exact reference. Record
-   bytes/checksums and scratch plan before acquisition (`tools/discover-ena.sh`,
-   `tools/acquire.sh`). Validate against truth, not our own calls. Measure wall,
-   CPU, RSS, peak scratch; profile hot functions only for observed bottlenecks.
-   Check WSL2 memory first.
-3. **Approximate PCA backend** (PLINK2 first) compared with exact PCA on identical
-   bounded data; seeds, eigenvalues, sign/subspace invariance. Address KING's
-   quadratic pair work before calling the genotype workflow scalable.
-4. **Genome-wide 2,504-person cohort** run, CI on a remote, and license-complete
-   release packaging.
-5. Possible refinement: a planner warning when reservations exceed physical RAM.
+1. **Commit** only when the user asks (they explicitly said not to commit so far).
+2. **Broader real-read validation**: more of chr20 or a whole chromosome, indels with a
+   haplotype-aware comparison (hap.py is Python, which the project avoids — evaluate a
+   native alternative first), peak scratch measurement, and a hot-function profile of
+   alignment/calling. Check WSL2 memory first.
+3. **Genotype import speed** for large cohorts (PLINK `--bcf` import took 25 of 32 minutes
+   on chr22); evaluate importing from the normalized BCF with more threads or PGEN
+   conversion options, measured on the existing `work/1000g-chr22` inputs.
+4. **Approximate PCA backend** (PLINK2 first) against exact PCA on identical bounded
+   data; address KING's quadratic pair work before claiming large-cohort scalability.
+5. **Genome-wide 2,504-person cohort**, CI on a remote, and license-complete packaging.
+6. Possible refinement: a planner warning when reservations exceed physical RAM.
 
 All C++ was reformatted with `.clang-format` (behavior-neutral; `make check` and
 the real-data comparison were re-run afterwards). `make format` re-applies it when
@@ -256,16 +292,20 @@ git status --short
 make && make doctor
 make check
 
-# Real-data validation on Linux (already prepared; reruns reuse all 15 tasks).
-build/popgen run --config work/real-validation-linux/config.json
-tools/report-real-validation.sh
+# Real-data validations on Linux (already prepared). The executable changed after the
+# restructuring, so the next run of each workflow recomputes its tasks.
+build/popgen run --config work/real-validation-linux/config.json && scripts/validation/report-real-validation.sh
+build/popgen run --config work/giab-hg002/config.json            # then scripts/validation/evaluate-calls.sh (see VALIDATION.md)
+build/popgen run --config work/1000g-chr22/config.json           # ~30 min; then report-real-validation.sh --out work/1000g-chr22
 
 # Synthetic demos and benchmark.
 make workflow && make genotype && make reads
 make benchmark SAMPLES=1000 SITES=1000
 
 # Acquisition/preparation are plan-only unless --download is given.
-tools/prepare-real-cohort.sh
+scripts/validation/prepare-real-cohort.sh
+scripts/validation/prepare-giab-reads.sh
+scripts/validation/prepare-1000g-chromosome.sh
 ```
 
 Find artifacts via `state/<task>.json` → `result_dir`. Never guess an attempt

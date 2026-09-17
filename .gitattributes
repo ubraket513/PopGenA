@@ -1,3 +1,4 @@
 * text=auto eol=lf
 third_party/*.h -text
 third_party/*.hpp -text
+third_party/src/*.tar.* binary

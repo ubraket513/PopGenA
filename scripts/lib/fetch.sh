@@ -1,3 +1,4 @@
+# shellcheck shell=bash
 # Bounded, verified HTTPS acquisition helpers shared by the data preparation tools.
 # Source after `set -euo pipefail`; callers define nothing except what each function takes.
 #
@@ -46,7 +47,7 @@ fetch_ranges() {
         valid_chunk "$path" "$size" && continue
         mkdir -p -- "$(dirname -- "$path")"
         ((${#args[@]})) && args+=(--next)
-        args+=(--fail --silent --show-error --proto =https --connect-timeout 30 --max-time 300 --retry 3
+        args+=(--fail --silent --show-error --proto '=https' --connect-timeout 30 --max-time 300 --retry 3
             --max-filesize "$size" --range "$start-$end" --dump-header "$path.headers" --output "$path.part" "$url")
     done <<<"$requests"
     if ((${#args[@]})); then curl --parallel --parallel-max "${FETCH_PARALLEL:-4}" "${args[@]}" || failed=1; fi
@@ -68,7 +69,7 @@ fetch_file() {
     local path=$1 url=$2 bytes=${3-}
     [[ -e $path ]] && return 0
     mkdir -p -- "$(dirname -- "$path")"
-    curl --fail --silent --show-error --proto =https --connect-timeout 30 --max-time 3600 --retry 3 \
+    curl --fail --silent --show-error --proto '=https' --connect-timeout 30 --max-time 3600 --retry 3 \
         ${bytes:+--max-filesize "$bytes"} --output "$path.part" -- "$url" || die "Download failed: $url"
     [[ -z $bytes || $(stat -c %s -- "$path.part") == "$bytes" ]] || die "Unexpected size for $url"
     mv -- "$path.part" "$path"

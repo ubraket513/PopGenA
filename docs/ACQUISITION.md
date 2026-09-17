@@ -7,19 +7,19 @@ both an explicit byte budget and `--download` before fetching biological files.
 
 ```bash
 # Metadata only; output must be a new directory.
-tools/discover-ena.sh --out out/ena-metadata
+scripts/acquisition/discover-ena.sh --out out/ena-metadata
 
 # Inspect metadata.tsv and catalog.json, select runs, and provide an explicit mapping.
-tools/discover-ena.sh --out out/ena-selected --run ERR3239276 \
+scripts/acquisition/discover-ena.sh --out out/ena-selected --run ERR3239276 \
   --mapping samples-to-individuals.tsv --reference-assembly GRCh38 \
   --reference-sha256 <SHA256-of-your-reference-FASTA>
 
 # Review the plan. This creates no output directory and downloads no FASTQs.
-tools/acquire.sh --manifest out/ena-selected/manifest.json \
+scripts/acquisition/acquire.sh --manifest out/ena-selected/manifest.json \
   --out data/fastq --max-bytes 40000000000
 
 # Fetch exactly the reviewed request when ready.
-tools/acquire.sh --manifest out/ena-selected/manifest.json \
+scripts/acquisition/acquire.sh --manifest out/ena-selected/manifest.json \
   --out data/fastq --max-bytes 40000000000 --download
 ```
 
@@ -67,7 +67,7 @@ MD5 verifies ENA's published checksum and accidental corruption; it is not a
 cryptographic provenance signature. There are no embedded credentials and no
 network fallback to alternate hosts or protocols.
 
-Run `bash tests/acquisition.sh` (part of `make check`)
+Run `bash tests/integration/acquisition.sh` (part of `make check`)
 for synthetic offline checks of manifests, mapping, budgets, checksum reuse,
 corrupt-existing preservation and rejection before publication. A process-local
 in-memory HTTP transport exercises the real downloader with correct, truncated,

@@ -143,12 +143,13 @@ calling. No automatic deletion of old generations is performed.
 
 ## Validation scope
 
-`tests/reads.sh` uses five runs, three individuals, four libraries and three
+`tests/integration/reads.sh` uses five runs, three individuals, four libraries and three
 independently specified SNP truths. It checks all genotype/depth values,
 cross-run duplicate marking, independent-library preservation, zero-coverage
 missingness, one low-quality pair removed per run, metadata and CSI queries.
 It also checks one/two-worker agreement, Unicode/space/ampersand paths, reuse,
 selective invalidation, corrupted output recovery, wrong reference hashes,
 malformed/truncated FASTQ and rejected budgets/configurations.
-This establishes integration on synthetic inputs; real-data accuracy, wall time,
-peak memory and disk limits remain to be measured separately.
+This establishes integration on synthetic inputs. A bounded real-read check (GIAB
+HG002, chr20:10-12 Mb, SNP F1 0.997) is described in VALIDATION.md; genome-wide
+accuracy, indels and peak disk limits remain to be measured.

@@ -13,7 +13,7 @@ usage() {
     echo 'Usage: evaluate-calls.sh --calls calls.bcf --truth truth.vcf.gz --bed confident.bed --region chr:start-end [--margin N] [--sample NAME] --out report.json' >&2
     exit 2
 }
-CALLS= TRUTH= BED= REGION= MARGIN=0 SAMPLE= OUT=
+CALLS='' TRUTH='' BED='' REGION='' MARGIN=0 SAMPLE='' OUT=''
 while (($#)); do
     case $1 in
     --calls) CALLS=$2; shift 2 ;;

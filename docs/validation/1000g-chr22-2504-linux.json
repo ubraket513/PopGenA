@@ -1,0 +1,204 @@
+{
+  "prepared": {
+    "prepared_utc": "2026-09-17T13:59:08Z",
+    "chromosome": "chr22",
+    "samples": 2504,
+    "sites": 929834,
+    "source_vcf_md5_verified": "aaf19d9c7ffcd86b34275899ddc898e7",
+    "reference_sha256": "8d440d7b863c6d0af1bc438385a770b0a861ddc0f5187b7466d893e2728a9b54",
+    "input_sha256": "50cf533a40d76c64e5e36469ba2a49d36593612a9d09c1273e03b1fac18888c3",
+    "selection": "All 2,504 individuals of the original panel; chr22 PASS biallelic SNPs from the NYGC 20201028 phased release",
+    "quality_policy": "Phased release GT only; DP/GQ filters explicitly disabled, not synthesized",
+    "relatedness_policy": "retain: one chromosome cannot establish genome-wide kinship; pairs are reported",
+    "scope": "Whole-chromosome genotype QC/relatedness/PCA scale check on the original 2,504-person 1000 Genomes panel; not population-structure inference from one chromosome"
+  },
+  "retained_samples": 2504,
+  "independent_sample_counts_match": true,
+  "independent_fields": [
+    "called",
+    "heterozygous",
+    "alt_alleles",
+    "missing"
+  ],
+  "pca": {
+    "eigenvalues": [
+      244.15,
+      94.6019,
+      30.4319,
+      25.5568,
+      7.68251,
+      7.40395,
+      6.44797,
+      6.1306,
+      5.9089,
+      5.682
+    ],
+    "markers": 9079,
+    "method": "PLINK2 exact variance-standardized PCA with mean imputation",
+    "pcs": 10,
+    "samples": 2504,
+    "validated": true
+  },
+  "tasks": [
+    {
+      "task": "bcf",
+      "elapsed_ms": 126151,
+      "max_rss_bytes": 5844992,
+      "cpu_user_ms": 121904,
+      "cpu_system_ms": 2541
+    },
+    {
+      "task": "import",
+      "elapsed_ms": 1480439,
+      "max_rss_bytes": 806907904,
+      "cpu_user_ms": 30602,
+      "cpu_system_ms": 191294
+    },
+    {
+      "task": "king",
+      "elapsed_ms": 10506,
+      "max_rss_bytes": 187379712,
+      "cpu_user_ms": 28764,
+      "cpu_system_ms": 740
+    },
+    {
+      "task": "mask",
+      "elapsed_ms": 92314,
+      "max_rss_bytes": 10063872,
+      "cpu_user_ms": 89213,
+      "cpu_system_ms": 2540
+    },
+    {
+      "task": "missing",
+      "elapsed_ms": 625,
+      "max_rss_bytes": 101597184,
+      "cpu_user_ms": 808,
+      "cpu_system_ms": 442
+    },
+    {
+      "task": "normalize",
+      "elapsed_ms": 59753,
+      "max_rss_bytes": 13008896,
+      "cpu_user_ms": 57194,
+      "cpu_system_ms": 2423
+    },
+    {
+      "task": "pca",
+      "elapsed_ms": 1813,
+      "max_rss_bytes": 166866944,
+      "cpu_user_ms": 5890,
+      "cpu_system_ms": 438
+    },
+    {
+      "task": "pca-check",
+      "elapsed_ms": 20,
+      "max_rss_bytes": 8003584,
+      "cpu_user_ms": 3,
+      "cpu_system_ms": 0
+    },
+    {
+      "task": "prune",
+      "elapsed_ms": 1309,
+      "max_rss_bytes": 157601792,
+      "cpu_user_ms": 311,
+      "cpu_system_ms": 1348
+    },
+    {
+      "task": "retained",
+      "elapsed_ms": 40986,
+      "max_rss_bytes": 1160273920,
+      "cpu_user_ms": 142938,
+      "cpu_system_ms": 10873
+    },
+    {
+      "task": "sample-qc",
+      "elapsed_ms": 3386,
+      "max_rss_bytes": 377671680,
+      "cpu_user_ms": 3022,
+      "cpu_system_ms": 2089
+    },
+    {
+      "task": "select",
+      "elapsed_ms": 20,
+      "max_rss_bytes": 9539584,
+      "cpu_user_ms": 3,
+      "cpu_system_ms": 6
+    },
+    {
+      "task": "site-qc",
+      "elapsed_ms": 4435,
+      "max_rss_bytes": 374521856,
+      "cpu_user_ms": 3262,
+      "cpu_system_ms": 3880
+    },
+    {
+      "task": "stats",
+      "elapsed_ms": 76188,
+      "max_rss_bytes": 13021184,
+      "cpu_user_ms": 75273,
+      "cpu_system_ms": 7540
+    },
+    {
+      "task": "validate",
+      "elapsed_ms": 5873,
+      "max_rss_bytes": 11423744,
+      "cpu_user_ms": 5733,
+      "cpu_system_ms": 119
+    }
+  ],
+  "last_run": {
+    "process": {
+      "cancelled": false,
+      "cpu_system_ms": 305033,
+      "cpu_user_ms": 573338,
+      "elapsed_ms": 1918009,
+      "exit_codes": [
+        0
+      ],
+      "max_rss_bytes": 1160273920,
+      "timed_out": false
+    },
+    "reused_tasks": 0,
+    "scheduled_tasks": 15,
+    "status": "complete",
+    "work_dir": "/home/dzk55/bioinformatics/PopGenA/work/1000g-chr22/analysis"
+  },
+  "retained_analysis_bytes": 7172449414,
+  "memory_metric": "Peak RSS of the largest process per task (getrusage), not the sum across a pipeline",
+  "scope": "Single chromosome interval integration only; not population structure or whole-genome accuracy",
+  "platform": "linux-x86_64 (WSL2), tools built from third_party/src",
+  "machine": {
+    "os": "Ubuntu 26.04.1 LTS",
+    "kernel": "6.18.33.2-microsoft-standard-WSL2",
+    "environment": "WSL2 on the Windows 11 machine recorded in machine.json",
+    "memory_total_kib": 7984768,
+    "memory_note": "WSL2 default VM memory limit (about half of the 16 GiB host); raise with memory= in %UserProfile%/.wslconfig",
+    "cpu": {
+      "name": "11th Gen Intel(R) Core(TM) i7-1165G7 @ 2.80GHz",
+      "physical_cores": 4,
+      "logical_processors": 8
+    },
+    "compiler": "gcc (Ubuntu 15.2.0-16ubuntu1) 15.2.0",
+    "root_available_bytes_at_measurement": 963295260672
+  },
+  "measured": "2026-09-17",
+  "pca_eigenvalues": [
+    244.15,
+    94.6019,
+    30.4319,
+    25.5568,
+    7.68251,
+    7.40395,
+    6.44797,
+    6.1306,
+    5.9089,
+    5.682
+  ],
+  "pca_max_relative_eigenpair_residual": 0.000002245737513201898,
+  "relatedness": {
+    "policy": "retain",
+    "reported_pairs_above_threshold": 465,
+    "note": "single-chromosome KING estimates are noisy; pairs reported, not excluded"
+  },
+  "note": "Other workloads shared the 8-thread / 7.6 GiB machine during this run; the PLINK --bcf import (1,480 s) dominated wall time"
+}

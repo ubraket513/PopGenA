@@ -1,51 +1,8 @@
-#define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
-#include <doctest.h>
-#include "core/platform.hpp"
 #include "core/process.hpp"
-#include "stats/stats.hpp"
+#include <doctest.h>
+#include <chrono>
 #include <fstream>
 #include <thread>
-TEST_CASE("Autosome mapping is explicit and rejects ambiguous names") {
-    for (int i = 1; i <= 22; ++i) {
-        CHECK(pg::autosome(std::to_string(i)));
-        CHECK(pg::autosome("chr" + std::to_string(i)));
-    }
-    for (const auto* s : {"0", "23", "X", "chrX", "chr01", "01", "1_random", "CHR1", ""}) CHECK_FALSE(pg::autosome(s));
-}
-TEST_CASE("Missing denominators and TSV trailing fields are preserved") {
-    CHECK(pg::ratio(1, 0) == "NA");
-    CHECK(pg::ratio(1, 4) == "0.25");
-    CHECK(pg::split_tsv("a\tb\t") == std::vector<std::string>{"a", "b", ""});
-}
-TEST_CASE("Publication rename refuses to replace an existing destination") {
-    auto dir = pg::fs::temp_directory_path() / pg::from_utf8("popgen-rename-" + pg::unique_id());
-    pg::fs::create_directory(dir);
-    pg::write_text(dir / "staged", "new");
-    pg::write_text(dir / "existing", "old");
-    CHECK_THROWS(pg::rename_no_replace(dir / "staged", dir / "existing"));
-    CHECK(pg::read_text(dir / "existing") == "old");
-    CHECK(pg::fs::exists(dir / "staged"));
-    pg::rename_no_replace(dir / "staged", dir / "published");
-    CHECK(pg::read_text(dir / "published") == "new");
-    CHECK_FALSE(pg::fs::exists(dir / "staged"));
-    pg::fs::remove_all(dir);
-}
-TEST_CASE("SHA256 matches a published known digest") {
-    auto p = pg::fs::temp_directory_path() / pg::unique_id();
-    pg::write_text(p, "abc");
-    CHECK(pg::sha256(p) == "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad");
-    pg::fs::remove(p);
-}
-TEST_CASE("Counts preserve independent called and excluded categories") {
-    pg::Counts a{2, 1, 3, 4, 5, 6}, b{3, 2, 4, 5, 6, 7};
-    a.add(b);
-    CHECK(a.called == 5);
-    CHECK(a.het == 3);
-    CHECK(a.alt == 7);
-    CHECK(a.missing == 9);
-    CHECK(a.filtered == 11);
-    CHECK(a.unsupported == 13);
-}
 
 namespace {
 struct ProcessFixture {
@@ -137,13 +94,4 @@ TEST_CASE("Completed jobs record CPU time and peak resident memory") {
     CHECK(result.max_rss_bytes >= 64ULL * 1024 * 1024);
     CHECK(result.record().at("max_rss_bytes") == result.max_rss_bytes);
     CHECK(result.cpu_user_ms + result.cpu_system_ms < result.elapsed_ms + 1000);
-}
-TEST_CASE("Exclusive locks reject a second holder and release on destruction") {
-    ProcessFixture f;
-    auto path = f.root / "test.lock";
-    {
-        auto lock = pg::exclusive_lock(path);
-        CHECK_THROWS(pg::exclusive_lock(path));
-    }
-    CHECK_NOTHROW(pg::exclusive_lock(path));
 }
