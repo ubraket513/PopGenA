@@ -1,0 +1,5 @@
+sample	population	called	heterozygous	alt_alleles	missing	quality_filtered	unsupported_ploidy	observed_heterozygosity	call_rate
+S1	A	4	2	2	1	0	0	0.5	0.8
+S2	A	3	1	1	2	0	0	0.333333333333	0.6
+S3	B	3	0	2	1	0	1	0	0.6
+S4	B	2	0	2	2	0	1	0	0.4

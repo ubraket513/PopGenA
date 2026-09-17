@@ -1,0 +1,3 @@
+population	called	heterozygous	alt_alleles	missing	quality_filtered	unsupported_ploidy	observed_heterozygosity	sites_with_calls	mean_expected_heterozygosity
+A	7	3	3	3	0	0	0.428571428571	4	0.3125
+B	5	0	4	3	0	2	0	3	0.166666666667

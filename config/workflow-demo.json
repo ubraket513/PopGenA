@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "work_dir": "../work/workflow-demo",
+  "resources": {"threads": 8, "memory_mb": 10240, "light_jobs": 1},
+  "inputs": {
+    "cohort": "../tests/fixtures/cohort.vcf",
+    "samples": "../tests/fixtures/samples.tsv"
+  },
+  "tools": {"bcftools": {"path": "bcftools.exe", "version_args": ["--version"]}},
+  "tasks": [
+    {
+      "id": "convert", "kind": "command", "pool": "heavy", "memory_mb": 512,
+      "commands": [
+        {"argv": ["bcftools", "view", "-Ou", "{input:cohort}"], "threads": 1},
+        {"argv": ["bcftools", "view", "-Ob", "-o", "{out}/cohort.bcf", "-"], "threads": 1}
+      ],
+      "outputs": ["cohort.bcf"]
+    },
+    {
+      "id": "stats", "kind": "stats", "depends_on": ["convert"], "pool": "heavy",
+      "input": "{task:convert}/cohort.bcf", "samples": "{input:samples}",
+      "hts_threads": 1, "memory_mb": 512
+    }
+  ]
+}

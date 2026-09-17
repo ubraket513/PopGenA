@@ -1,0 +1,5 @@
+[
+  {"path":"third_party/CLI11.hpp","version":"2.5.0","sha256":"4bf0a9490aa7209176ccda70544f95413e594d2207cca33c9cd18ded189a63a6"},
+  {"path":"third_party/json.hpp","version":"3.12.0","sha256":"aaf127c04cb31c406e5b04a63f1ae89369fccde6d8fa7cdda1ed4f32dfc5de63"},
+  {"path":"third_party/doctest.h","version":"2.5.0","sha256":"a58efc9446d70ddd5dd3b7724ebb8742882860f36f46da64d62993b02911fb6f"}
+]

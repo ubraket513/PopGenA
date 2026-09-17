@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# Preserve the caller's working directory so relative CLI paths behave normally.
+set -euo pipefail
+
+root=$(CDPATH= cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)
+case "$(uname -s)" in
+    MINGW*|MSYS*) executable="$root/build/popgen.exe" ;;
+    Linux*) executable="$root/build/popgen" ;;
+    *)
+        printf '%s\n' 'This launcher supports Git Bash on Windows and a future native Linux build.' >&2
+        exit 2
+        ;;
+esac
+
+if [[ ! -x "$executable" ]]; then
+    printf 'Executable not found: %s\n' "$executable" >&2
+    printf '%s\n' 'On Windows, build with ./make.sh or ./make.ps1. Linux implementation is not available yet.' >&2
+    exit 127
+fi
+exec "$executable" "$@"

@@ -1,0 +1,18 @@
+##fileformat=VCFv4.3
+##contig=<ID=1,length=1000>
+##contig=<ID=chr2,length=1000>
+##contig=<ID=X,length=1000>
+##FILTER=<ID=q10,Description="Low site quality">
+##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">
+##FORMAT=<ID=DP,Number=1,Type=Integer,Description="Depth">
+##FORMAT=<ID=GQ,Number=1,Type=Integer,Description="Genotype quality">
+#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	S1	S2	S3	S4
+1	10	rs1	A	G	60	PASS	.	GT:DP:GQ	0/0:20:50	0/1:15:40	1/1:30:60	./.:.:.
+1	20	rs2	C	T	60	PASS	.	GT:DP:GQ	0/1:4:50	0/.:20:50	0/0:20:5	1/1:20:50
+1	30	rs3	G	A	60	PASS	.	GT:DP:GQ	./.:.:.	./.:.:.	./.:.:.	./.:.:.
+chr2	40	rs4	T	C	60	.	.	GT	0|1	0/0	1	0/1/1
+1	50	rs5	A	C	60	PASS	.	GT:DP:GQ	0/0:20:50	0/0:20:50	0/0:20:50	0/0:20:50
+X	60	x	A	G	60	PASS	.	GT	0/1	0/0	1/1	0/1
+1	70	multi	A	C,G	60	PASS	.	GT	1/2	0/1	0/0	./.
+1	80	indel	A	AC	60	PASS	.	GT	0/1	0/0	1/1	0/1
+1	90	filtered	A	G	5	q10	.	GT	0/1	0/0	1/1	0/1
