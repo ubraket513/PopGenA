@@ -5,3 +5,6 @@ work/
 .cache/
 compile_commands.json
 .serena/
+CLAUDE.md
+HANDOFF.md
+PLAN.md

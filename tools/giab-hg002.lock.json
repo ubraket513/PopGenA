@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "purpose": "Bounded real-read accuracy check: GIAB HG002 Illumina 2x250 read pairs from one GRCh38 interval, called by the reads workflow and compared with the GIAB v4.2.1 benchmark in its confident regions",
+  "sample": "HG002",
+  "assembly": "GRCh38",
+  "region": "chr20:10000000-12000000",
+  "evaluation_margin_bases": 10000,
+  "download_budget_bytes": 400000000,
+  "scratch_reservation_bytes": 20000000000,
+  "reads": {
+    "name": "HG002.GRCh38.2x250.bam",
+    "url": "https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/data/AshkenazimTrio/HG002_NA24385_son/NIST_Illumina_2x250bps/novoalign_bams/HG002.GRCh38.2x250.bam",
+    "bytes": 130770531934,
+    "md5": "56c30eaa4e2f25ff0ac80ef30e09d78e",
+    "md5_source": "HG002_corrected_md5sums.feb19upload.txt (whole file; not verifiable from byte ranges)",
+    "header_bytes": 1048576
+  },
+  "index": {
+    "name": "HG002.GRCh38.2x250.bam.bai",
+    "url": "https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/data/AshkenazimTrio/HG002_NA24385_son/NIST_Illumina_2x250bps/novoalign_bams/HG002.GRCh38.2x250.bam.bai",
+    "bytes": 9451360,
+    "md5": "a3c2b449df6509ca83fbd3fea22b9aee"
+  },
+  "truth": [
+    {
+      "name": "HG002_GRCh38_1_22_v4.2.1_benchmark.vcf.gz",
+      "url": "https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/AshkenazimTrio/HG002_NA24385_son/NISTv4.2.1/GRCh38/HG002_GRCh38_1_22_v4.2.1_benchmark.vcf.gz",
+      "bytes": 156252944
+    },
+    {
+      "name": "HG002_GRCh38_1_22_v4.2.1_benchmark.vcf.gz.tbi",
+      "url": "https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/AshkenazimTrio/HG002_NA24385_son/NISTv4.2.1/GRCh38/HG002_GRCh38_1_22_v4.2.1_benchmark.vcf.gz.tbi"
+    },
+    {
+      "name": "HG002_GRCh38_1_22_v4.2.1_benchmark_noinconsistent.bed",
+      "url": "https://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/AshkenazimTrio/HG002_NA24385_son/NISTv4.2.1/GRCh38/HG002_GRCh38_1_22_v4.2.1_benchmark_noinconsistent.bed",
+      "bytes": 11494021
+    }
+  ],
+  "truth_checksum_note": "GIAB md5.in for v4.2.1 lists only supplementary files; SHA256 of the main benchmark VCF/BED is recorded locally but not verified against a publisher checksum",
+  "reference": {
+    "name": "chr20",
+    "url": "https://ftp.1000genomes.ebi.ac.uk/vol1/ftp/technical/reference/GRCh38_reference_genome/GRCh38_full_analysis_set_plus_decoy_hla.fa",
+    "range_start": 2751788762,
+    "bases": 64444167,
+    "line_bases": 70,
+    "line_bytes": 71,
+    "sequence_md5": "b18e6c531b0bd70e949a7fc20859cb01",
+    "compatibility": "The GIAB BAM was aligned to GRCh38_full_plus_hs38d1_analysis_set_minus_alts; chr20 is identical to the 1000 Genomes GRCh38 analysis set (dictionary M5 above)"
+  }
+}
