@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "purpose": "Bounded real-data genotype integration validation; not genome-wide population inference",
+  "assembly": "GRCh38",
+  "download_budget_bytes": 550000000,
+  "scratch_reservation_bytes": 4000000000,
+  "release_manifest": "https://ftp.1000genomes.ebi.ac.uk/vol1/ftp/data_collections/1000G_2504_high_coverage/working/20201028_3202_phased/phased-manifest_July2021.tsv",
+  "source_collection_samples": 3202,
+  "selection": "40 lexicographically first IDs in each of AFR, AMR, EAS, EUR, SAS from the original 2504 panel; chr21:15000000-16000000 PASS biallelic SNPs",
+  "files": [
+    {
+      "name": "chr21.vcf.gz",
+      "url": "https://ftp.1000genomes.ebi.ac.uk/vol1/ftp/data_collections/1000G_2504_high_coverage/working/20201028_3202_phased/CCDG_14151_B01_GRM_WGS_2020-08-05_chr21.filtered.shapeit2-duohmm-phased.vcf.gz",
+      "bytes": 496155724,
+      "md5": "80e99e81f0bc739e6e36843a9c5c46df"
+    },
+    {
+      "name": "chr21.vcf.gz.tbi",
+      "url": "https://ftp.1000genomes.ebi.ac.uk/vol1/ftp/data_collections/1000G_2504_high_coverage/working/20201028_3202_phased/CCDG_14151_B01_GRM_WGS_2020-08-05_chr21.filtered.shapeit2-duohmm-phased.vcf.gz.tbi",
+      "bytes": 35859,
+      "md5": "904516a25d6d5a581aabc0002eae98c5"
+    },
+    {
+      "name": "chr21.sequence.txt",
+      "url": "https://ftp.1000genomes.ebi.ac.uk/vol1/ftp/technical/reference/GRCh38_reference_genome/GRCh38_full_analysis_set_plus_decoy_hla.fa",
+      "range_start": 2817153685,
+      "bases": 46709983,
+      "line_bases": 70,
+      "line_bytes": 71,
+      "sequence_md5": "974dc7aec0b755b19f031418fdedf293"
+    }
+  ],
+  "metadata": [
+    {
+      "name": "original-panel.tsv",
+      "bytes": 55156,
+      "url": "https://ftp.1000genomes.ebi.ac.uk/vol1/ftp/release/20130502/integrated_call_samples_v3.20130502.ALL.panel",
+      "sha256": "b4023dc6ee2d62ee89c8d4d347db4d348e65518d66d346574cdae7a4bbd76858"
+    }
+  ]
+}

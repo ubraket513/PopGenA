@@ -69,3 +69,11 @@ TEST_CASE("Job committed-memory cap rejects allocations beyond the task reservat
     auto result=pg::run_pipeline({{{f.helper,"allocate","256"},1}},options);
     REQUIRE_FALSE(result.success());CHECK(result.exit_codes[0]==42);
 }
+TEST_CASE("Completed jobs retain peak committed memory and IO accounting") {
+    ProcessFixture f;
+    auto result=pg::run_pipeline({{{f.helper,"allocate","32"},1}},f.options());
+    REQUIRE(result.success());CHECK(result.peak_job_committed_bytes>=32ULL*1024*1024);
+    CHECK(result.record().at("peak_job_committed_bytes")==result.peak_job_committed_bytes);
+    result=pg::run_pipeline({{{f.helper,"emit","262144"},1}},f.options());
+    REQUIRE(result.success());CHECK(result.io_write_bytes>=262144);
+}

@@ -1,0 +1,36 @@
+{
+    "samples":  [
+                    "A",
+                    "B",
+                    "C"
+                ],
+    "schema_version":  1,
+    "genotypes":  {
+                      "C":  [
+                                "1/1",
+                                "./.",
+                                "0/0"
+                            ],
+                      "B":  [
+                                "0/1",
+                                "0/0",
+                                "0/1"
+                            ],
+                      "A":  [
+                                "0/0",
+                                "0/1",
+                                "1/1"
+                            ]
+                  },
+    "low_quality_pairs_per_run":  1,
+    "notes":  "A_lane1/A_lane2 share a library and duplicate every fragment. A_library2 is an independent library and must not be deduplicated against A_lib1. C has no coverage at site 2000.",
+    "duplicate_pairs_same_library":  72,
+    "reference_sha256":  "fec402df6c61f25f0231d38b8626f3644c04eb367475b69aebf40a0777afcc67",
+    "libraries":  4,
+    "runs":  5,
+    "positions":  [
+                      1000,
+                      2000,
+                      3000
+                  ]
+}

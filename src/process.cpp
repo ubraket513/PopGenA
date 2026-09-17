@@ -106,7 +106,9 @@ bool ProcessResult::success() const {
     return !timed_out&&!cancelled&&!exit_codes.empty()&&std::all_of(exit_codes.begin(),exit_codes.end(),[](auto code){return code==0;});
 }
 json ProcessResult::record() const {
-    return {{"exit_codes",exit_codes},{"timed_out",timed_out},{"cancelled",cancelled},{"elapsed_ms",elapsed_ms}};
+    return {{"exit_codes",exit_codes},{"timed_out",timed_out},{"cancelled",cancelled},{"elapsed_ms",elapsed_ms},
+        {"peak_job_committed_bytes",peak_job_committed_bytes},{"cpu_user_ms",cpu_user_ms},{"cpu_kernel_ms",cpu_kernel_ms},
+        {"io_read_bytes",io_read_bytes},{"io_write_bytes",io_write_bytes}};
 }
 ProcessResult run_pipeline(const std::vector<Command>& commands,const ProcessOptions& o) {
     if(commands.empty()||commands.size()>16)throw std::runtime_error("Pipeline must contain 1..16 commands");
@@ -187,7 +189,19 @@ ProcessResult run_pipeline(const std::vector<Command>& commands,const ProcessOpt
         for(int tries=0;tries<250;++tries) {
             JOBOBJECT_BASIC_ACCOUNTING_INFORMATION accounting{};
             if(!QueryInformationJobObject(job.get(),JobObjectBasicAccountingInformation,&accounting,sizeof(accounting),nullptr))win_error("Query job cleanup");
-            if(!accounting.ActiveProcesses){result.elapsed_ms=elapsed();return result;}
+            if(!accounting.ActiveProcesses){
+                JOBOBJECT_EXTENDED_LIMIT_INFORMATION memory{};
+                JOBOBJECT_BASIC_AND_IO_ACCOUNTING_INFORMATION usage{};
+                if(!QueryInformationJobObject(job.get(),JobObjectExtendedLimitInformation,&memory,sizeof(memory),nullptr) ||
+                   !QueryInformationJobObject(job.get(),JobObjectBasicAndIoAccountingInformation,&usage,sizeof(usage),nullptr))
+                    win_error("Query completed job resource usage");
+                result.peak_job_committed_bytes=memory.PeakJobMemoryUsed;
+                result.cpu_user_ms=usage.BasicInfo.TotalUserTime.QuadPart/10000;
+                result.cpu_kernel_ms=usage.BasicInfo.TotalKernelTime.QuadPart/10000;
+                result.io_read_bytes=usage.IoInfo.ReadTransferCount;
+                result.io_write_bytes=usage.IoInfo.WriteTransferCount;
+                result.elapsed_ms=elapsed();return result;
+            }
             Sleep(20);
         }
         throw std::runtime_error("Pipeline descendants did not exit within cleanup timeout");

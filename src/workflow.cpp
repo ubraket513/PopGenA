@@ -1,5 +1,6 @@
 #include "workflow.hpp"
 #include "genotype.hpp"
+#include "reads.hpp"
 #include <algorithm>
 #include <chrono>
 #include <functional>
@@ -80,7 +81,7 @@ fs::path source_path(const json& value,const fs::path& base) {
 struct Loaded {json config;fs::path source,root;WinHandle lock;};
 Loaded load(const fs::path& config_path) {
     Loaded loaded;loaded.source=fs::canonical(config_path);loaded.config=json::parse(read_text(loaded.source));
-    if(loaded.config.contains("workflow_type"))loaded.config=expand_genotypes(loaded.config,loaded.source.parent_path());
+    if(loaded.config.contains("workflow_type"))loaded.config=loaded.config["workflow_type"]=="reads"?expand_reads(loaded.config,loaded.source.parent_path()):expand_genotypes(loaded.config,loaded.source.parent_path());
     auto& c=loaded.config;keys(c,{"schema_version","work_dir","resources","inputs","tools","reference","tasks"});
     require(number(c,"schema_version",0,1,1)==1,"schema_version must be 1");
     require(c.contains("work_dir"),"work_dir is required");loaded.root=source_path(c["work_dir"],loaded.source.parent_path());

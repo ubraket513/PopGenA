@@ -39,8 +39,24 @@ provide a documented native Windows installation route. These findings concern
 upstream installation documentation, not proof that community Windows ports
 cannot exist.
 
-Therefore, FASTQ-to-alignment execution must use a separately pinned and tested
-native build or an explicitly configured compatible Windows executable. Until
-one is verified, BAM/CRAM entry using the existing native samtools/bcftools
-installation can be validated independently. Do not claim fastp or BWA-MEM is
-installed based on a workflow template or command-presence check alone.
+The implemented path now uses fastp 1.3.3 from the community
+[win-ngs Windows port](https://github.com/win-ngs/fastp-windows-build/releases/tag/v1.3.3-windows).
+This is not an official OpenGene binary. Its UCRT64 executable and six runtime
+DLLs are individually pinned, together with the ZIP hash, in
+`tools/raw-tools.lock.json`. Source and build scripts are available from that
+repository; upstream fastp is MIT licensed and bundled libraries have separate
+terms. The archive does not contain a complete redistribution notice bundle.
+
+Alignment uses the official
+[Bowtie2 2.5.5 MinGW release](https://github.com/BenLangmead/bowtie2/releases/tag/v2.5.5).
+The small-index native build/align executables and LICENSE are pinned. PopGenA
+invokes them directly without the Perl wrappers. Bowtie2 is GPL-3.0-or-later.
+This is an alternative aligner, not a claim of numerical equivalence to BWA.
+BWA source portability was inspected but no native BWA build is installed.
+
+`tools/bootstrap-raw.ps1` is also called by the main bootstrap. It checks archive
+and installed-file SHA256 and repairs missing/damaged pinned members from the
+verified archive. These are measured integrity pins, not publisher signatures.
+Normal builds and workflows do not download tools. The raw executables ran
+successfully on the synthetic integration fixture without WSL or an MSYS shell.
+See READS.md for scientific limits and the Windows path/report adapters.

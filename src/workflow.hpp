@@ -34,6 +34,8 @@ struct ProcessResult {
     std::vector<uint32_t> exit_codes;
     bool timed_out=false, cancelled=false;
     uint64_t elapsed_ms=0;
+    uint64_t peak_job_committed_bytes=0, cpu_user_ms=0, cpu_kernel_ms=0;
+    uint64_t io_read_bytes=0, io_write_bytes=0;
     bool success() const;
     json record() const;
 };

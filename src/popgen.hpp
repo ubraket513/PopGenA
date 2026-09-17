@@ -7,7 +7,7 @@
 namespace pg {
 namespace fs = std::filesystem;
 using json = nlohmann::json;
-inline constexpr const char* version = "0.3.0";
+inline constexpr const char* version = "0.4.0";
 struct StatsOptions {
     fs::path input, samples, out;
     int threads = 2, min_dp = 0, min_gq = 0;

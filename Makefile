@@ -4,7 +4,7 @@ NPROC ?= 4
 OUT ?= out/demo
 CONFIG ?= config/workflow-demo.json
 NINJA := .deps/ucrt64/bin/ninja.exe
-.PHONY: all bootstrap test verify check run doctor plan workflow genotype-plan genotype clean help compile-commands
+.PHONY: all bootstrap test verify check run doctor plan workflow genotype-plan genotype reads-plan reads benchmark-fixture validation-tools clean help compile-commands
 all:
 	@"$(NINJA)" -j$(NPROC)
 bootstrap:
@@ -19,6 +19,7 @@ verify: all
 	@powershell -NoProfile -ExecutionPolicy Bypass -File tests/mask.ps1
 	@powershell -NoProfile -ExecutionPolicy Bypass -File tests/genotype.ps1
 	@powershell -NoProfile -ExecutionPolicy Bypass -File tests/acquisition.ps1
+	@powershell -NoProfile -ExecutionPolicy Bypass -File tests/reads.ps1
 check: test verify
 run: all
 	@build\popgen.exe stats --input tests/fixtures/cohort.vcf --samples tests/fixtures/samples.tsv --out "$(OUT)" --replace
@@ -32,6 +33,14 @@ genotype-plan: all
 	@build\popgen.exe plan --config config/genotype-demo.json
 genotype: all
 	@build\popgen.exe run --config config/genotype-demo.json
+reads-plan: all
+	@build\popgen.exe plan --config config/reads-demo.json
+reads: all
+	@build\popgen.exe run --config config/reads-demo.json
+benchmark-fixture: all
+	@"$(NINJA)" -j$(NPROC) build/benchmark-fixture.exe
+validation-tools: benchmark-fixture
+	@"$(NINJA)" -j$(NPROC) build/region-ranges.exe
 clean:
 	@"$(NINJA)" -t clean
 compile-commands:
@@ -40,5 +49,6 @@ help:
 	@echo make: build; check: unit and integration tests; run: offline demo
 	@echo plan: review workflow; workflow: execute/resume; CONFIG=path/to/config.json
 	@echo genotype-plan: review offline QC/PCA demo; genotype: execute/resume it
+	@echo reads-plan: review offline FASTQ demo; reads: execute/resume it
 	@echo bootstrap: explicit dependency download; doctor: tool report
 	@echo clean: compilation outputs only; compile-commands: editor metadata

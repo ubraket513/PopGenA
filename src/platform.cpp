@@ -72,9 +72,11 @@ json doctor() {
     if(!length||length==executable.size()) throw std::runtime_error("Cannot locate application directory");
     auto local=fs::path(executable.data()).parent_path().parent_path()/".deps"/"ucrt64"/"bin";
     result["optional_tools"]=json::object();
-    for(const auto* name:{L"bcftools.exe",L"samtools.exe",L"plink2.exe",L"fastp.exe",L"bwa.exe",L"Rscript.exe"}) {
+    for(const auto* name:{L"bcftools.exe",L"samtools.exe",L"plink2.exe",L"fastp.exe",L"bowtie2-align-s.exe",L"bowtie2-build-s.exe",L"bwa.exe",L"Rscript.exe"}) {
         auto candidate=local/name;
         if(std::wstring(name)==L"plink2.exe")candidate=local.parent_path().parent_path()/"plink2/plink2.exe";
+        if(std::wstring(name)==L"fastp.exe")candidate=local.parent_path().parent_path()/"raw-tools/fastp-1.3.3-windows-ucrt64/fastp.exe";
+        if(std::wstring(name).starts_with(L"bowtie2-"))candidate=local.parent_path().parent_path()/"raw-tools/bowtie2-2.5.5-mingw-x86_64"/name;
         if(fs::is_regular_file(candidate)) {
             result["optional_tools"][utf8(fs::path(name))]=utf8(candidate);
             continue;

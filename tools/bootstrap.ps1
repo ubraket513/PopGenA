@@ -34,4 +34,5 @@ foreach ($p in $lock) {
     }
 }
 & (Join-Path $PSScriptRoot 'bootstrap-plink2.ps1')
+& (Join-Path $PSScriptRoot 'bootstrap-raw.ps1')
 Write-Host 'Native Windows dependencies ready. Run .\make.ps1 check'

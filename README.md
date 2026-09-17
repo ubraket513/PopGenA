@@ -1,6 +1,6 @@
 # PopGenA — native Windows C++ population genomics
 
-The implementation provides streaming VCF/BCF statistics, resumable native workflows, and an offline-validated genotype QC, relatedness, LD-pruning and PCA path. It runs as a native Windows x64 CLI with PowerShell and Git Bash entry points. Linux implementation is a separate future effort.
+The implementation provides streaming VCF/BCF statistics, resumable native workflows, an offline-validated genotype QC, relatedness, LD-pruning and PCA path, and a native paired-FASTQ-to-genotype workflow. It runs as a native Windows x64 CLI with PowerShell and Git Bash entry points. Linux implementation is a separate future effort.
 
 ## Build and run
 
@@ -16,6 +16,8 @@ From PowerShell in this directory:
 ./make.ps1 workflow     # execute/resume that workflow
 ./make.ps1 genotype-plan # review offline QC/PCA workflow
 ./make.ps1 genotype      # execute/resume its 15 tasks
+./make.ps1 reads-plan    # review offline paired-FASTQ workflow
+./make.ps1 reads         # execute/resume its 40 tasks
 ```
 
 The launcher changes PATH only for its own process. No WSL, Python, Julia, CMake, administrator installation, or global environment change is required. Windows 10 version 1903 or newer (UTF-8 application code page), PowerShell, and a tar executable with Zstandard support are required. Bootstrap uses HTTPS and verifies every archive against `tools/windows-packages.lock.json`. The entire compiler and native dependency closure is project-local under `.deps/`; archives remain in `.cache/` for repeat setup. Allow several GB of disk space for the toolchain and cache.
@@ -50,6 +52,6 @@ See [scientific definitions](docs/STATISTICS.md) for exact denominators and sele
 
 ## Status
 
-Build, statistics, workflows and the bounded genotype QC/PCA path are implemented. See [genotype configuration and scientific contract](docs/GENOTYPES.md), [workflow recovery](docs/WORKFLOWS.md), and [Git Bash entry points](docs/GIT_BASH.md). ENA discovery and size/checksum-verified acquisition are implemented as explicit PowerShell tools; see [acquisition](docs/ACQUISITION.md). Raw-read preprocessing/alignment/calling, optional figures and scaling remain planned in [PLAN.md](PLAN.md). Reference projects are not runtime dependencies.
+Build, statistics, workflows and the bounded genotype QC/PCA path are implemented. See [genotype configuration and scientific contract](docs/GENOTYPES.md), [workflow recovery](docs/WORKFLOWS.md), and [Git Bash entry points](docs/GIT_BASH.md). ENA discovery and size/checksum-verified acquisition are implemented as explicit PowerShell tools; see [acquisition](docs/ACQUISITION.md). Native raw-read preprocessing/alignment/joint calling is implemented and tested on synthetic data; see [raw-read configuration](docs/READS.md). Real-data validation, optional figures and scaling remain planned in [PLAN.md](PLAN.md). Reference projects are not runtime dependencies.
 
-HTSlib, bcftools, samtools and PLINK2 are pinned native Windows tools. Bootstrap verifies the additional PLINK2 archive and executable against `tools/plink2.lock.json`. The genotype demo is synthetic; no real human sequencing dataset has been downloaded or analyzed. Native fastp/BWA availability remains unresolved; see [tool audit](docs/NATIVE_TOOLS.md).
+HTSlib, bcftools, samtools and PLINK2 are pinned native Windows tools. Bootstrap verifies the additional PLINK2 archive and executable against `tools/plink2.lock.json`. The genotype demo is synthetic; no real human sequencing dataset has been downloaded or analyzed. The raw-read path pins a community Windows fastp build and official native Bowtie2; BWA is not installed. See [tool origins and limitations](docs/NATIVE_TOOLS.md).

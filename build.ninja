@@ -8,7 +8,7 @@ rule cxx
 rule resource
   command = .deps/ucrt64/bin/windres.exe --preprocessor=gcc --preprocessor-arg=-E --preprocessor-arg=-xc --preprocessor-arg=-DRC_INVOKED -O coff -i $in -o $out
 rule link
-  command = $cxx $in -o $out -L.deps/ucrt64/lib -lhts -lbcrypt -lshell32 -fopenmp
+  command = $cxx $in -o $out -L.deps/ucrt64/lib -lhts -lz -lbcrypt -lshell32 -fopenmp
 rule runtime
   command = powershell -NoProfile -ExecutionPolicy Bypass -File tools/runtime.ps1
   restat = 1
@@ -19,11 +19,16 @@ build build/process.o: cxx src/process.cpp | third_party/json.hpp tools/windows-
 build build/workflow.o: cxx src/workflow.cpp | third_party/json.hpp tools/windows-packages.lock.json
 build build/genotype.o: cxx src/genotype.cpp | third_party/json.hpp tools/windows-packages.lock.json
 build build/genotype_mask.o: cxx src/genotype_mask.cpp | third_party/json.hpp tools/windows-packages.lock.json
+build build/reads.o: cxx src/reads.cpp | third_party/json.hpp tools/windows-packages.lock.json
 build build/app.res: resource src/app.rc | src/app.manifest
 build build/runtime.stamp: runtime tools/runtime.ps1 tools/windows-packages.lock.json
-build build/popgen.exe: link build/main.o build/stats.o build/platform.o build/process.o build/workflow.o build/genotype.o build/genotype_mask.o build/app.res || build/runtime.stamp
+build build/popgen.exe: link build/main.o build/stats.o build/platform.o build/process.o build/workflow.o build/genotype.o build/genotype_mask.o build/reads.o build/app.res || build/runtime.stamp
 build build/test.o: cxx tests/test.cpp | third_party/doctest.h third_party/json.hpp tools/windows-packages.lock.json
 build build/helper.o: cxx tests/process_helper.cpp | third_party/json.hpp tools/windows-packages.lock.json
 build build/process-helper.exe: link build/helper.o build/platform.o build/process.o build/app.res || build/runtime.stamp
 build build/tests.exe: link build/test.o build/stats.o build/platform.o build/process.o build/app.res || build/runtime.stamp build/process-helper.exe
 default build/popgen.exe
+build build/benchmark_fixture.o: cxx tests/benchmark_fixture.cpp
+build build/benchmark-fixture.exe: link build/benchmark_fixture.o build/platform.o build/process.o build/app.res || build/runtime.stamp
+build build/region_ranges.o: cxx tools/region_ranges.cpp
+build build/region-ranges.exe: link build/region_ranges.o build/platform.o build/process.o build/app.res || build/runtime.stamp

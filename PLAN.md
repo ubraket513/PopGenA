@@ -1,7 +1,7 @@
 # PopGenA clean implementation plan
 
 Prepared 2026-09-17 after inspecting the local references with Serena MCP.
-Status: milestones 1–3 and the bounded genotype QC/PCA path of milestone 4 are implemented. Milestone 5 metadata discovery and bounded acquisition are implemented; native raw-read preprocessing/alignment/calling remain incomplete. Real-data validation/scaling remain planned.
+Status: milestones 1–3 and the bounded genotype QC/PCA path of milestone 4 are implemented. Milestone 5 metadata discovery and bounded acquisition are implemented; native raw-read preprocessing/alignment/joint calling are now implemented and synthetic-fixture validated. Real-data validation/scaling remain planned.
 
 ## Implementation update
 
@@ -14,7 +14,7 @@ Status: milestones 1–3 and the bounded genotype QC/PCA path of milestone 4 are
 - The offline workflow converts VCF to BCF through actual bcftools processes and then computes statistics. Process/workflow tests cover upstream failure despite downstream success, argument quoting/Unicode, interruption/descendant cleanup, resume/invalidation, damaged outputs/manifests, pool scheduling and committed-memory limits.
 - Milestone 4 now pins official native PLINK2 and expands a genotype config into 15 resumable tasks: normalization, masking, QC, explicit relatedness selection, PGEN/BCF+CSI, separate diversity/PCA marker sets, LD pruning, exact PCA and independent streamed eigenpair validation. Synthetic results: 61 retained samples, 238 diversity sites, 234 PCA markers. See `docs/GENOTYPES.md` for boundaries and numerical checks.
 - `make.sh` and `popgen` provide tested Git Bash entry points alongside unchanged PowerShell usage. Linux remains separate.
-- Milestone 5 now has ENA metadata discovery, explicit sample-to-individual/reference manifests, default plan-only acquisition, byte/disk budgets, streaming MD5/size verification and validated-file reuse. No biological downloads occurred. Official fastp/BWA native Windows binaries were not found in upstream install documentation; source ports/compatible native alternatives and the complete read-to-genotype path still require implementation/validation.
+- Milestone 5 now has ENA metadata discovery, explicit sample-to-individual/reference manifests, default plan-only acquisition, byte/disk budgets, streaming MD5/size verification and validated-file reuse. No biological downloads occurred. The raw-read path now pins community Windows fastp 1.3.3 and official Bowtie2 2.5.5, with read-group-aware alignment, per-library duplicate marking, joint calling and the existing genotype mask/statistics boundary. The 40-task fixture covers five runs, three samples, four libraries, expected SNP calls/depths, Unicode paths and recovery. See `docs/READS.md`. BWA remains unsupported; real-cohort validation is still required.
 - No real sequencing data has been downloaded. `README.md`, `docs/STATISTICS.md` and `docs/WORKFLOWS.md` document the current executable's behavior.
 
 ## Location and scope
@@ -150,5 +150,5 @@ Complete the Windows toolchain and HTSlib feasibility gate first, then milestone
 - Serena used project activation, source pattern searches and C++ symbol overviews. Activation created workspace-level `.serena` configuration.
 - Context7 was queried for Ninja; its partial results were supplemented with the [official Ninja manual](https://ninja-build.org/manual.html), especially pools and dependency semantics.
 - Before implementation, verify current documentation for each tool's exact invocation through Context7, with official documentation fallback.
-- Still to select/validate: native raw-read preprocessing/alignment builds, real reference release/checksums and sample mapping, real-cohort QC thresholds, optional clustering, population differentiation estimator, and measured scaling. Compiler/core tools/PLINK2 are already pinned and validated on synthetic inputs.
+- Still to select/validate: real reference release/checksums and sample mapping, real-cohort QC thresholds, optional clustering, population differentiation estimator, and measured scaling. Compiler/core tools/PLINK2 are already pinned and validated on synthetic inputs.
 - The original planning task performed no compilation or installation. Subsequent authorized implementation installed native project-local tools and ran builds/tests as described above; biological data downloads remain unperformed.
